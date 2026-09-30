@@ -1,0 +1,106 @@
+import { Button, TextArea, TextField, Typography } from "@wanteddev/wds";
+import { IconClose } from "@wanteddev/wds-icon";
+import { useNavigate } from "react-router-dom";
+
+import ScreenHeader from "@/components/ui/ScreenHeader";
+import { useScreenHeader } from "@/components/ui/useScreenHeader";
+
+// Figma: 공연/03 공연 만들기 (nodeId 101:23994)
+function ShowCreateScreen() {
+  const navigate = useNavigate();
+
+  useScreenHeader(
+    <ScreenHeader
+      leading={
+        <button onClick={() => navigate(-1)} type="button">
+          <IconClose className="size-6 text-label-normal" />
+        </button>
+      }
+      title="공연 만들기"
+      variant="normal"
+    />,
+  );
+
+  return (
+    <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
+      <div className="flex flex-1 flex-col gap-4.5 px-5 pt-2 pb-6">
+        <div className="rounded-xl bg-surface p-3.5">
+          <Typography
+            color="semantic.label.normal"
+            variant="label1"
+            weight="medium"
+          >
+            프로젝트 모임에서 운영할 공연이에요.
+          </Typography>
+        </div>
+
+        <label className="flex flex-col gap-2">
+          <Typography
+            color="semantic.label.normal"
+            variant="label1"
+            weight="bold"
+          >
+            공연 이름
+          </Typography>
+          <TextField defaultValue="2026 가을 정기공연" width="100%" />
+        </label>
+
+        <div className="flex gap-2">
+          <label className="flex flex-1 flex-col gap-2">
+            <Typography
+              color="semantic.label.normal"
+              variant="label1"
+              weight="bold"
+            >
+              공연 날짜
+            </Typography>
+            <TextField defaultValue="2026-10-17" width="100%" />
+          </label>
+          <label className="flex flex-1 flex-col gap-2">
+            <Typography
+              color="semantic.label.normal"
+              variant="label1"
+              weight="bold"
+            >
+              시작 시간
+            </Typography>
+            <TextField defaultValue="18:00" width="100%" />
+          </label>
+        </div>
+
+        <label className="flex flex-col gap-2">
+          <Typography
+            color="semantic.label.normal"
+            variant="label1"
+            weight="bold"
+          >
+            장소
+          </Typography>
+          <TextField defaultValue="홍대 롤링홀" width="100%" />
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <Typography
+            color="semantic.label.normal"
+            variant="label1"
+            weight="bold"
+          >
+            공연 설명
+          </Typography>
+          <TextArea
+            minRows={2}
+            placeholder="공연을 소개해 주세요"
+            width="100%"
+          />
+        </label>
+      </div>
+      <div className="flex shrink-0 flex-col gap-2 bg-surface-elevated px-5 pt-3 pb-[34px]">
+        <Button color="primary" fullWidth size="large" variant="solid">
+          공연 만들기
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export default ShowCreateScreen;

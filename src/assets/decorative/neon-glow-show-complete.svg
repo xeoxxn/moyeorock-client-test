@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="254" height="236" viewBox="0 0 254 236" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Neon Glow" filter="url(#filter0_f_0_166)">
+<ellipse cx="127" cy="118" rx="72" ry="63" fill="#FF3B33" fill-opacity="0.5"/>
+</g>
+<defs>
+<filter id="filter0_f_0_166" x="0" y="0" width="254" height="236" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="27.5" result="effect1_foregroundBlur_0_166"/>
+</filter>
+</defs>
+</svg>
