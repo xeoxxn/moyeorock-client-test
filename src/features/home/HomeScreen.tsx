@@ -1,4 +1,4 @@
-import { Button, Typography } from "@wanteddev/wds";
+import { Typography } from "@wanteddev/wds";
 import {
     IconBell,
     IconChevronRight,
@@ -6,7 +6,6 @@ import {
     IconMusicMicrophone,
 } from "@wanteddev/wds-icon";
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import neonGlow1 from "@/assets/decorative/neon-glow-home-1.svg";
 import neonGlow2 from "@/assets/decorative/neon-glow-home-2.svg";
