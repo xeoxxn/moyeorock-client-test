@@ -70,6 +70,7 @@ function TeamNewTypeScreen() {
                 onClick={() => setType(option.value)}
                 type="button"
               >
+                  <div className="flex items-center gap-2">
                 <Typography
                   color="semantic.label.normal"
                   variant="headline2"
@@ -84,6 +85,7 @@ function TeamNewTypeScreen() {
                 >
                   {option.description}
                 </Typography>
+                  </div>
               </button>
             );
           })}
