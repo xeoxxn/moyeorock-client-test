@@ -9,6 +9,7 @@ import { useRef, useState } from "react";
 
 import neonGlow1 from "@/assets/decorative/neon-glow-home-1.svg";
 import neonGlow2 from "@/assets/decorative/neon-glow-home-2.svg";
+import logoWordmark from "@/assets/logo/moyeorock-wordmark.png";
 import mascotMusic from "@/assets/mascot/music.png";
 import mascotPeace from "@/assets/mascot/peace.png";
 
@@ -92,7 +93,7 @@ function HomeScreen() {
   useScreenHeader(
     <ScreenHeader
       trailing={<IconBell className="size-6 text-label-strong" />}
-      variant="logo"
+      variant="home"
     />,
   );
 
@@ -138,34 +139,36 @@ function HomeScreen() {
         src={neonGlow2}
       />
 
-      <div className="relative flex flex-col gap-6 px-5 pt-2 pb-8">
+      <div className="relative flex flex-col gap-6 px-5 pb-8">
         <section className="flex items-center gap-2.5">
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <Typography
-              color="semantic.label.assistive"
-              variant="label2"
-              weight="medium"
-            >
-              9월 17일 목요일
-            </Typography>
-            <div className="flex flex-col">
+          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+            {/* 홈의 주인공은 워드마크다 — 그래서 날짜 줄은 빼고(아래 "오늘의 일정"이 날짜를
+                이미 보여준다) 인사말도 title3 2줄에서 headline2 1줄로 줄였다. 로고는 원본
+                이미지를 누끼 따서 돌 질감(균열·파편)을 입힌 PNG이다. 네온 글로우는 일부러
+                넣지 않는다(사용자 요청) — 균열·파편 실루엣이 글로우에 묻힌다. */}
+            <img
+              alt="모여락"
+              className="h-[88px] w-auto max-w-full self-start object-contain object-left"
+              src={logoWordmark}
+            />
+            <div className="flex flex-wrap items-baseline gap-x-1.5">
               <Typography
                 color="semantic.label.strong"
-                variant="title3"
+                variant="headline2"
                 weight="bold"
               >
                 광철님,
               </Typography>
               <Typography
-                className="text-glow"
+                className="text-glow-sm"
                 color="semantic.primary.normal"
-                variant="title3"
+                variant="headline2"
                 weight="bold"
               >
                 오늘도 무대 위로
               </Typography>
             </div>
-            <div className="flex flex-wrap gap-1.5 pt-1.5">
+            <div className="flex flex-wrap gap-1.5">
               {PROFILE_TAGS.map((tag) => (
                 <div
                   className="rounded-xl border border-line-solid px-2.5 py-0.5"

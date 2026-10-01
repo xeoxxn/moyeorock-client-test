@@ -1,13 +1,13 @@
 import { TopNavigation, Typography } from "@wanteddev/wds";
 import type { ReactNode } from "react";
 
-import mascotFlag from "@/assets/mascot/flag.png";
-
 type ScreenHeaderProps =
   | {
-      // 홈 등 최상위 탭 화면의 로고 헤더(Figma "Top Bar", nodeId 101:11537) — WDS 인스턴스가 아니라
-      // Stream 로컬 컴포넌트와 같은 방식의 모여락 전용 로컬 마크업이다. 뒤로가기가 없다.
-      variant: "logo";
+      // 홈 등 최상위 탭 화면의 상단 바(Figma "Top Bar", nodeId 101:11537) — 뒤로가기가 없다.
+      // Figma 원안은 "작은 마스코트 + 모여락 텍스트"였지만, 워드마크 로고를 크게 쓰기로 해서
+      // (사용자 요청) 로고는 본문 히어로로 내려갔다. 헤더는 스크롤되지 않고 늘 자리를 차지하므로
+      // 여기에 큰 로고를 두면 본문이 그만큼 영영 줄어든다 — 그래서 아이콘만 남긴다.
+      variant: "home";
       trailing?: ReactNode;
     }
   | {
@@ -27,25 +27,10 @@ type ScreenHeaderProps =
     };
 
 function ScreenHeader(props: ScreenHeaderProps) {
-  if (props.variant === "logo") {
+  if (props.variant === "home") {
     return (
-      <div className="flex w-full items-center gap-2 px-5 py-1.5">
-        <img alt="" className="size-[30px]" src={mascotFlag} />
-        <Typography
-          as="p"
-          className="text-glow-sm"
-          color="semantic.label.strong"
-          variant="headline1"
-          weight="bold"
-        >
-          모여락
-        </Typography>
-        <div className="flex-1" />
-        {props.trailing !== undefined && (
-          <div className="flex shrink-0 items-center gap-4">
-            {props.trailing}
-          </div>
-        )}
+      <div className="flex h-10 w-full items-center justify-end gap-4 px-5">
+        {props.trailing}
       </div>
     );
   }

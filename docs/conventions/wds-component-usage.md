@@ -85,7 +85,7 @@ Figma 홈 화면(`nodeId 101:11659`)의 Bottom Nav는 **홈 · 일정 · 모임 
 
 ## `ScreenHeader` — 두 variant
 
-- `variant="logo"`: 최상위 탭 화면(홈 등)의 로고 헤더. WDS 인스턴스가 아니라 Figma "Top Bar"(nodeId 101:11537)를 그대로 옮긴 로컬 마크업 — 마스코트 flag 아이콘 + "모여락" 워드마크(`text-glow-sm`) + `trailing`.
+- `variant="home"`: 최상위 탭 화면(홈 등)의 상단 바. WDS 인스턴스가 아니라 Figma "Top Bar"(nodeId 101:11537) 자리를 대신하는 로컬 마크업인데, 로고를 크게 쓰기로 하면서 워드마크는 본문 히어로로 내려갔다 — 헤더는 스크롤 영역 밖이라 늘 자리를 차지하기 때문이다. 지금은 `trailing` 아이콘만 오른쪽에 둔다.
 - `variant="normal"`(기본값): 하위 화면의 뒤로가기 헤더. WDS `TopNavigation`을 그대로 쓴다(`background={false}`, `leadingContent`, `trailingContent`, `variant="normal"`). 아직 실제 뒤로가기 헤더가 있는 화면을 구현하기 전이라 세부 스펙(패딩 등)은 다음 화면 구현 시 `get_design_context`로 대조해서 확정한다.
 
 ## 이미 구현된 화면 (참고용 실제 코드)
