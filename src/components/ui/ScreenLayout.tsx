@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
-import BottomNav, { type BottomNavValue } from "@/components/ui/BottomNav";
+import BottomNav, {
+  BOTTOM_NAV_ORDER,
+  type BottomNavValue,
+} from "@/components/ui/BottomNav";
 import { ScreenBackgroundPortalContext } from "@/components/ui/screenBackgroundPortalContext";
 import { ScreenHeaderContext } from "@/components/ui/screenHeaderContext";
 import { ScreenSheetPortalContext } from "@/components/ui/screenSheetPortalContext";
@@ -53,11 +56,27 @@ function ScreenLayout({ hasBottomNav = true }: ScreenLayoutProps) {
 
   useNativeSafeAreaColors(hasBottomNav);
 
+  // 탭 전환을 View Transitions API로 감싸 Shared Axis(이전 화면은 페이드아웃하며 밀려 나가고
+  // 새 화면이 반대쪽에서 밀려 들어옴) 전환을 건다 — 애니메이션 자체는 index.css에 있다.
+  // 미끄러지는 방향은 CSS가 알 수 없으므로(라우터는 "어느 탭에서 어느 탭으로"를 모른다) 여기서
+  // 탭 순서를 비교해 html의 data-nav-direction에 심어 둔다.
+  // startViewTransition이 없는 브라우저(iOS 18 미만 WKWebView 등)에서는 React Router가 그냥
+  // 즉시 전환한다 — 동작에는 차이가 없고 애니메이션만 빠진다.
+  const handleBottomNavChange = (next: BottomNavValue) => {
+    if (next === bottomNavValue) return;
+    const forward =
+      BOTTOM_NAV_ORDER.indexOf(next) > BOTTOM_NAV_ORDER.indexOf(bottomNavValue);
+    document.documentElement.dataset.navDirection = forward
+      ? "forward"
+      : "back";
+    navigate(BOTTOM_NAV_PATHS[next], { viewTransition: true });
+  };
+
   return (
     <ScreenHeaderContext.Provider value={setHeader}>
       <ScreenSheetPortalContext.Provider value={sheetPortalEl}>
         <ScreenBackgroundPortalContext.Provider value={backgroundPortalEl}>
-          <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-background sm:w-[480px] sm:shadow-[0_0_20px_rgba(0,0,0,0.4)]">
+          <div className="view-transition-frame relative flex h-dvh w-full flex-col overflow-hidden bg-background sm:w-[480px] sm:shadow-[0_0_20px_rgba(0,0,0,0.4)]">
             {/* 화면 전용 배경 포털 대상(네온 글로우 등) — 프레임 안에서 가장 먼저(맨 아래)
                 그려져서, 투명한 헤더까지 자연스럽게 비쳐 보인다. */}
             <div
@@ -72,10 +91,12 @@ function ScreenLayout({ hasBottomNav = true }: ScreenLayoutProps) {
                 <Outlet />
               </div>
             </div>
+            {/* view-transition-name이 붙은 자손은 조상(프레임)의 스냅샷에서 빠진다 — 그래서
+                아래 한 클래스만으로 화면이 미끄러지는 동안 Bottom Nav는 제자리에 남는다. */}
             {hasBottomNav && (
-              <div className="relative shrink-0">
+              <div className="view-transition-bottom-nav relative shrink-0">
                 <BottomNav
-                  onValueChange={(value) => navigate(BOTTOM_NAV_PATHS[value])}
+                  onValueChange={handleBottomNavChange}
                   value={bottomNavValue}
                 />
               </div>

@@ -88,6 +88,18 @@ Figma 홈 화면(`nodeId 101:11659`)의 Bottom Nav는 **홈 · 일정 · 모임 
 - `variant="home"`: 최상위 탭 화면(홈 등)의 상단 바. WDS 인스턴스가 아니라 Figma "Top Bar"(nodeId 101:11537) 자리를 대신하는 로컬 마크업인데, 로고를 크게 쓰기로 하면서 워드마크는 본문 히어로로 내려갔다 — 헤더는 스크롤 영역 밖이라 늘 자리를 차지하기 때문이다. 지금은 `trailing` 아이콘만 오른쪽에 둔다.
 - `variant="normal"`(기본값): 하위 화면의 뒤로가기 헤더. WDS `TopNavigation`을 그대로 쓴다(`background={false}`, `leadingContent`, `trailingContent`, `variant="normal"`). 아직 실제 뒤로가기 헤더가 있는 화면을 구현하기 전이라 세부 스펙(패딩 등)은 다음 화면 구현 시 `get_design_context`로 대조해서 확정한다.
 
+## 화면 전환 — Shared Axis (View Transitions API)
+
+Bottom Nav로 탭을 바꿀 때 이전 화면은 페이드아웃하며 진행 방향으로 30px 밀려 나가고 새 화면이 반대쪽에서 밀려 들어온다 — Material Motion의 **shared axis** 패턴이다(탭에는 좌우 순서라는 공간적 관계가 있으므로 `fade through`가 아니라 이쪽이 맞다). 애니메이션 정의는 `src/index.css` 맨 아래, 전환을 시작하는 쪽은 `ScreenLayout`의 `handleBottomNavChange`다.
+
+- 전환은 React Router의 `navigate(path, { viewTransition: true })`가 `document.startViewTransition`으로 감싸 준다. 데이터 모드(`createBrowserRouter`)에서만 동작하는 옵션인데 이 앱이 그 모드다.
+- 미끄러지는 **방향**은 CSS가 알 수 없다(라우터는 "어느 탭에서 어느 탭으로"를 모른다). `handleBottomNavChange`가 `BottomNav`의 `BOTTOM_NAV_ORDER`로 탭 순서를 비교해 `html[data-nav-direction]`에 `forward`/`back`을 심고, CSS가 그걸 보고 keyframe을 고른다. 탭 순서는 `BottomNav`의 `TABS`에서 파생되므로 탭을 추가/재배치해도 따로 고칠 데가 없다.
+- 프레임 전체(헤더·배경 글로우·본문)가 함께 움직이고 Bottom Nav만 제자리에 남는다. `view-transition-name`이 붙은 자손은 조상의 스냅샷에서 빠지기 때문에, Bottom Nav에 `view-transition-bottom-nav` 유틸리티를 준 것만으로 분리된다.
+- **`view-transition-name`은 한 시점에 문서 전체에서 유일해야 한다.** 같은 이름이 둘이면 전환이 통째로 취소된다(애니메이션 없이 즉시 전환되고 콘솔 경고만 남는다). 새 전환 대상을 추가할 때는 새 이름을 쓸 것.
+- 직접 keyframe을 줄 때는 `mix-blend-mode: normal`과 `isolation: auto`로 되돌려야 한다. 기본값(`plus-lighter`)은 제자리 크로스페이드용이라, 서로 지나가는 두 화면이 겹치는 동안 색이 더해져 떠 보인다.
+- `document.startViewTransition`이 없는 브라우저(iOS 18 미만 WKWebView 등)에서는 React Router가 그냥 즉시 전환한다 — 동작 차이는 없고 애니메이션만 빠진다. `prefers-reduced-motion: reduce`에서도 애니메이션을 끈다.
+- 하위 화면 push/pop에는 아직 걸지 않았다 — 거는 경우 뒤로가기 방향 판별이 따로 필요하다.
+
 ## 이미 구현된 화면 (참고용 실제 코드)
 
 | Figma nodeId | 화면 | 코드 |

@@ -32,6 +32,10 @@ const TABS: BottomNavTab[] = [
   { Icon: IconPerson, label: "마이", value: "mine" },
 ];
 
+// 화면 전환 애니메이션의 방향(오른쪽 탭으로 가면 forward)을 ScreenLayout이 이 순서로 계산한다.
+// 탭 순서를 두 곳에 적어두면 어긋나므로 TABS에서 파생시킨다.
+export const BOTTOM_NAV_ORDER: BottomNavValue[] = TABS.map((tab) => tab.value);
+
 function BottomNav({ value, onValueChange }: BottomNavProps) {
   return (
     <div className="flex w-full flex-col items-center border-line-neutral border-t bg-surface-elevated px-3 pt-2">
