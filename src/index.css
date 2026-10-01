@@ -50,8 +50,13 @@
   --color-label-alternative: var(--semantic-label-alternative);
   --color-label-assistive: var(--semantic-label-assistive);
 
-  --color-line-neutral: var(--semantic-line-normal-neutral);
-  --color-line-solid: var(--semantic-line-solid-neutral);
+  /* 테두리는 아주 흐리게 간다 — 카드가 테두리가 아니라 bg-surface의 명도 차로 떠 보이는 게
+     이 다크 테마에 맞다(원래는 WDS 기본값인 흰색 8%/12%를 그대로 썼는데 선이 또렷해서
+     화면이 어수선했다). 여기서 더 낮추면 배경에 묻혀 사실상 테두리가 사라진다.
+     WDS 시맨틱 변수(--semantic-line-*)는 건드리지 않는다 — TextField·Select 같은 WDS
+     컴포넌트가 제 테두리로 쓰는 값이라, 같이 낮추면 입력 필드 외곽이 안 보인다. */
+  --color-line-neutral: rgba(255, 255, 255, 0.02);
+  --color-line-solid: rgba(255, 255, 255, 0.04);
 
   --color-accent: var(--semantic-primary-normal);
   --color-accent-strong: var(--semantic-primary-strong);
