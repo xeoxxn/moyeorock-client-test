@@ -6,7 +6,7 @@ import { Outlet } from "react-router-dom";
 // 위아래로 꽉 채우므로(ScreenLayout의 h-dvh) 여기서 세로 여백을 주지 않는다.
 function App() {
   return (
-    <div className="sm:flex sm:min-h-dvh sm:justify-center sm:bg-black">
+    <div className="sm:flex sm:min-h-dvh sm:justify-center sm:bg-background">
       <Outlet />
     </div>
   );

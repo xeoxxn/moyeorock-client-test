@@ -14,7 +14,11 @@ function CrewNewStep1Screen() {
       <button onClick={() => navigate(-1)} type="button">
         <IconChevronLeft className="size-6 text-label-normal" />
       </button>
-      <Typography color="semantic.label.normal" variant="headline2" weight="bold">
+      <Typography
+        color="semantic.label.normal"
+        variant="headline2"
+        weight="bold"
+      >
         모임 만들기
       </Typography>
     </div>,
@@ -22,22 +26,34 @@ function CrewNewStep1Screen() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-5 scrollbar-hidden">
+      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-5">
         <div className="flex gap-1">
           <div className="h-1 flex-1 rounded-full bg-accent-strong shadow-neon-sm" />
           <div className="h-1 flex-1 rounded-full bg-white/5" />
           <div className="h-1 flex-1 rounded-full bg-white/5" />
         </div>
         <div className="flex flex-col gap-2">
-          <Typography color="semantic.label.normal" variant="title3" weight="bold">
+          <Typography
+            color="semantic.label.normal"
+            variant="title3"
+            weight="bold"
+          >
             어떤 모임을 만들까요?
           </Typography>
-          <Typography color="semantic.label.alternative" variant="body2" weight="regular">
+          <Typography
+            color="semantic.label.alternative"
+            variant="body2"
+            weight="regular"
+          >
             만들면 내가 모임장이 돼요
           </Typography>
         </div>
         <div className="flex flex-col gap-2">
-          <Typography color="semantic.label.normal" variant="label1" weight="bold">
+          <Typography
+            color="semantic.label.normal"
+            variant="label1"
+            weight="bold"
+          >
             모임 이름
           </Typography>
           <TextField width="100%">
@@ -45,24 +61,41 @@ function CrewNewStep1Screen() {
           </TextField>
         </div>
         <div className="flex flex-col gap-2">
-          <Typography color="semantic.label.normal" variant="label1" weight="bold">
+          <Typography
+            color="semantic.label.normal"
+            variant="label1"
+            weight="bold"
+          >
             모임 유형
           </Typography>
           <button
             className="flex w-full items-center gap-2 rounded-xl bg-surface p-3"
             type="button"
           >
-            <Typography className="flex-1 text-left" color="semantic.label.normal" variant="body1" weight="regular">
+            <Typography
+              className="flex-1 text-left"
+              color="semantic.label.normal"
+              variant="body1"
+              weight="regular"
+            >
               상시 운영
             </Typography>
             <IconChevronDown className="size-4 text-label-normal" />
           </button>
         </div>
         <div className="flex flex-col gap-2">
-          <Typography color="semantic.label.normal" variant="label1" weight="bold">
+          <Typography
+            color="semantic.label.normal"
+            variant="label1"
+            weight="bold"
+          >
             모임 소개
           </Typography>
-          <TextArea minRows={2} placeholder="모임 소개를 입력해 주세요" width="100%" />
+          <TextArea
+            minRows={2}
+            placeholder="모임 소개를 입력해 주세요"
+            width="100%"
+          />
         </div>
       </div>
       <div className="shrink-0 px-5 pt-3 pb-[34px]">

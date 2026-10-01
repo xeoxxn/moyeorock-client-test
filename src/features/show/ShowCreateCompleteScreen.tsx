@@ -19,7 +19,7 @@ function ShowCreateCompleteScreen() {
         />
         <img
           alt=""
-          className="relative size-[180px] shadow-neon-lg"
+          className="relative size-[180px] drop-shadow-neon-lg"
           src={mascotMegaphone}
         />
         <Typography

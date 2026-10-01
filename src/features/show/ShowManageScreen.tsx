@@ -66,7 +66,7 @@ function ShowManageScreen() {
           </ContentBadge>
         </div>
 
-        <label className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2" htmlFor="show-status">
           <Typography
             color="semantic.label.normal"
             variant="label1"
@@ -74,7 +74,12 @@ function ShowManageScreen() {
           >
             공연 상태
           </Typography>
-          <Select onChange={setStatus} value={status} width="100%">
+          <Select
+            id="show-status"
+            onChange={setStatus}
+            value={status}
+            width="100%"
+          >
             <Option value="scheduled">예정</Option>
             <Option value="recruiting">팀 모집 중</Option>
             <Option value="closed">종료</Option>

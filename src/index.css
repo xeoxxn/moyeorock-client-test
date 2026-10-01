@@ -27,6 +27,14 @@
     --semantic-line-normal-neutral: rgba(255, 255, 255, 0.08);
     --semantic-line-solid-neutral: rgba(255, 255, 255, 0.12);
   }
+
+  /* WDS ThemeProvider는 기본으로 body 배경을 semantic.background.normal.normal(카드 색,
+   * #17171a)로 칠한다 — main.tsx에서 disableDefaultGlobalStyle로 그 동작을 끄고 대신 여기서
+   * 화면 캔버스 색(캔버스 #0b0b0d)을 직접 칠한다. 노치 기기의 세이프에어리어 자리는 우리
+   * 레이아웃 바깥(body)이 비쳐 보이는 자리라, 카드 색이 섞이면 캔버스와 다른 색 틈이 생긴다. */
+  body {
+    background-color: var(--semantic-background-normal-alternative);
+  }
 }
 
 @theme {
@@ -100,6 +108,23 @@
 
 @utility shadow-neon-lg {
   box-shadow: 0 0 34px 0 rgba(255, 59, 51, 0.55);
+}
+
+/* 마스코트 PNG(누끼 딴 투명 배경)처럼 알파 채널이 있는 이미지에 글로우를 줄 때는 반드시
+   drop-shadow-neon-*를 쓴다. shadow-neon-*(box-shadow)는 엘리먼트의 사각형 박스 기준으로
+   그려져서, 투명한 여백까지 포함한 네모난 박스가 그대로 비쳐 보인다(실제로 겪은 버그 —
+   캐릭터 뒤에 각진 배경 박스가 생기는 것처럼 보였다). filter: drop-shadow()는 알파 채널의
+   실제 실루엣을 따라가므로 이미지에는 이쪽을 쓴다. */
+@utility drop-shadow-neon-sm {
+  filter: drop-shadow(0 0 8px rgba(255, 59, 51, 0.7));
+}
+
+@utility drop-shadow-neon-md {
+  filter: drop-shadow(0 0 14px rgba(255, 59, 51, 0.6));
+}
+
+@utility drop-shadow-neon-lg {
+  filter: drop-shadow(0 0 22px rgba(255, 59, 51, 0.55));
 }
 
 /* 네온 텍스트 글로우 — 강조 헤드라인·로고에 사용 */

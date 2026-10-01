@@ -20,7 +20,7 @@ function OnboardingCompleteScreen() {
         />
         <img
           alt="모여락 마스코트"
-          className="relative size-[190px] shadow-neon-lg"
+          className="relative size-[190px] drop-shadow-neon-lg"
           src={mascotLaugh}
         />
         <div className="relative flex flex-col items-center text-center">

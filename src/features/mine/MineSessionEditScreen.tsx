@@ -34,7 +34,9 @@ function MineSessionEditScreen() {
       prev.map((s) => (s.name === name ? { ...s, enabled: !s.enabled } : s)),
     );
   const setLevel = (name: string, level: Level) =>
-    setSessions((prev) => prev.map((s) => (s.name === name ? { ...s, level } : s)));
+    setSessions((prev) =>
+      prev.map((s) => (s.name === name ? { ...s, level } : s)),
+    );
 
   useScreenHeader(
     <ScreenHeader
@@ -61,15 +63,24 @@ function MineSessionEditScreen() {
   );
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto scrollbar-hidden">
+    <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
       <div className="flex flex-col gap-6 px-5 pt-2 pb-8">
         <div className="flex flex-col gap-2">
-          <Typography as="p" color="semantic.label.normal" variant="title3" weight="bold">
+          <Typography
+            as="p"
+            color="semantic.label.normal"
+            variant="title3"
+            weight="bold"
+          >
             맡고 있는 세션과
             <br />
             실력을 알려주세요
           </Typography>
-          <Typography color="semantic.label.alternative" variant="body2" weight="regular">
+          <Typography
+            color="semantic.label.alternative"
+            variant="body2"
+            weight="regular"
+          >
             세션마다 실력을 따로 고를 수 있어요
           </Typography>
         </div>
@@ -86,7 +97,11 @@ function MineSessionEditScreen() {
             <div className="flex items-center gap-2">
               <Typography
                 className="flex-1"
-                color={session.enabled ? "semantic.label.normal" : "semantic.label.alternative"}
+                color={
+                  session.enabled
+                    ? "semantic.label.normal"
+                    : "semantic.label.alternative"
+                }
                 variant="body1"
                 weight="bold"
               >

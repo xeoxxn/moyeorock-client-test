@@ -9,7 +9,11 @@ import {
   TabListItem,
   Typography,
 } from "@wanteddev/wds";
-import { IconMusicMicrophone, IconPersons, IconPlus } from "@wanteddev/wds-icon";
+import {
+  IconMusicMicrophone,
+  IconPersons,
+  IconPlus,
+} from "@wanteddev/wds-icon";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -98,7 +102,10 @@ function TeamListScreen() {
 
   return (
     <div className="scrollbar-hidden flex-1 overflow-y-auto">
-      <Tab onValueChange={(value) => value === "crew" && navigate("/crew")} value="team">
+      <Tab
+        onValueChange={(value) => value === "crew" && navigate("/crew")}
+        value="team"
+      >
         <TabList resize="fill" size="large">
           <TabListItem value="crew">모임</TabListItem>
           <TabListItem value="team">팀</TabListItem>
@@ -106,14 +113,21 @@ function TeamListScreen() {
       </Tab>
 
       <div className="flex flex-col gap-4 px-5 pt-5 pb-8">
-        <Typography color="semantic.label.alternative" variant="body2" weight="medium">
+        <Typography
+          color="semantic.label.alternative"
+          variant="body2"
+          weight="medium"
+        >
           모임 안의 팀과 독립 팀을 한곳에서 확인해요.
           <br />
           모임 없이도 팀을 만들 수 있어요.
         </Typography>
 
         <div className="-mx-5">
-          <Category onValueChange={(v) => setFilter(v as TeamFilter)} value={filter}>
+          <Category
+            onValueChange={(v) => setFilter(v as TeamFilter)}
+            value={filter}
+          >
             <CategoryList horizontalPadding size="small">
               {FILTERS.map((item) => (
                 <CategoryListItem key={item.value} value={item.value}>
@@ -124,7 +138,11 @@ function TeamListScreen() {
           </Category>
         </div>
 
-        <Typography color="semantic.label.alternative" variant="label2" weight="bold">
+        <Typography
+          color="semantic.label.alternative"
+          variant="label2"
+          weight="bold"
+        >
           결과 {TEAMS.length}개
         </Typography>
 
@@ -137,21 +155,38 @@ function TeamListScreen() {
               type="button"
             >
               <div className="flex items-center gap-1.5">
-                <Typography color="semantic.label.strong" variant="body1" weight="bold">
+                <Typography
+                  color="semantic.label.strong"
+                  variant="body1"
+                  weight="bold"
+                >
                   {team.name}
                 </Typography>
                 {team.role === "leader" && (
-                  <ContentBadge className="shadow-neon-sm" color="accent" size="xsmall" variant="solid">
+                  <ContentBadge
+                    className="shadow-neon-sm"
+                    color="accent"
+                    size="xsmall"
+                    variant="solid"
+                  >
                     팀장
                   </ContentBadge>
                 )}
                 {team.role === "member" && (
-                  <ContentBadge color="neutral" size="xsmall" variant="outlined">
+                  <ContentBadge
+                    color="neutral"
+                    size="xsmall"
+                    variant="outlined"
+                  >
                     멤버
                   </ContentBadge>
                 )}
               </div>
-              <Typography color="semantic.label.alternative" variant="label2" weight="medium">
+              <Typography
+                color="semantic.label.alternative"
+                variant="label2"
+                weight="medium"
+              >
                 {team.description}
               </Typography>
               {team.affiliation && (
@@ -167,13 +202,21 @@ function TeamListScreen() {
               <div className="flex items-center gap-2.5 pt-1">
                 <div className="flex items-center gap-1">
                   <IconMusicMicrophone className="size-3.5 text-label-assistive" />
-                  <Typography color="semantic.label.alternative" variant="label2" weight="medium">
+                  <Typography
+                    color="semantic.label.alternative"
+                    variant="label2"
+                    weight="medium"
+                  >
                     {team.showOrKind}
                   </Typography>
                 </div>
                 <div className="flex items-center gap-1">
                   <IconPersons className="size-3.5 text-label-assistive" />
-                  <Typography color="semantic.label.alternative" variant="label2" weight="medium">
+                  <Typography
+                    color="semantic.label.alternative"
+                    variant="label2"
+                    weight="medium"
+                  >
                     {team.memberCount}명
                   </Typography>
                 </div>

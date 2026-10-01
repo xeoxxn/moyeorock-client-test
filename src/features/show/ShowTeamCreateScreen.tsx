@@ -37,7 +37,7 @@ function ShowTeamCreateScreen() {
           팀을 만들어요
         </Typography>
 
-        <label className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2" htmlFor="team-name">
           <Typography
             color="semantic.label.normal"
             variant="label1"
@@ -45,10 +45,10 @@ function ShowTeamCreateScreen() {
           >
             팀 이름
           </Typography>
-          <TextField placeholder="팀 이름 입력" width="100%" />
+          <TextField id="team-name" placeholder="팀 이름 입력" width="100%" />
         </label>
 
-        <label className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2" htmlFor="team-intro">
           <Typography
             color="semantic.label.normal"
             variant="label1"
@@ -56,10 +56,14 @@ function ShowTeamCreateScreen() {
           >
             팀 소개
           </Typography>
-          <TextField placeholder="어떤 음악을 연주하나요?" width="100%" />
+          <TextField
+            id="team-intro"
+            placeholder="어떤 음악을 연주하나요?"
+            width="100%"
+          />
         </label>
 
-        <label className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2" htmlFor="team-session">
           <Typography
             color="semantic.label.normal"
             variant="label1"
@@ -67,7 +71,12 @@ function ShowTeamCreateScreen() {
           >
             내 연주 세션
           </Typography>
-          <Select onChange={setSession} value={session} width="100%">
+          <Select
+            id="team-session"
+            onChange={setSession}
+            value={session}
+            width="100%"
+          >
             <Option value="vocal">보컬</Option>
             <Option value="guitar">기타</Option>
             <Option value="bass">베이스</Option>
@@ -76,7 +85,7 @@ function ShowTeamCreateScreen() {
           </Select>
         </label>
 
-        <label className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2" htmlFor="team-recruit">
           <Typography
             color="semantic.label.normal"
             variant="label1"
@@ -84,7 +93,11 @@ function ShowTeamCreateScreen() {
           >
             함께할 세션 모집 (선택)
           </Typography>
-          <TextField placeholder="예: 드럼 1명, 베이스 1명" width="100%" />
+          <TextField
+            id="team-recruit"
+            placeholder="예: 드럼 1명, 베이스 1명"
+            width="100%"
+          />
         </label>
 
         <div className="rounded-xl bg-surface p-3.5">

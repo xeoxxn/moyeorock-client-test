@@ -32,7 +32,9 @@
 
 Tailwind 쪽 별칭: `bg-background`(캔버스) / `bg-surface`(카드) / `bg-surface-elevated`(Bottom Nav) / `text-label-{strong,normal,alternative,assistive}` / `border-line-{neutral,solid}` / `bg-accent` / `bg-accent-strong` / `bg-accent-subtle`(모임 모집 배지 등 20% 틴트) / `bg-kakao` + `text-kakao-label`.
 
-네온 글로우 장식은 `shadow-neon-{sm,md,lg}`(box-shadow), `text-glow`/`text-glow-sm`(text-shadow) 유틸리티로 뺐다 — 화면마다 `shadow-[0_0_34px_...]` 같은 임의값을 새로 재지 않는다.
+네온 글로우 장식은 `shadow-neon-{sm,md,lg}`(box-shadow) / `drop-shadow-neon-{sm,md,lg}`(filter: drop-shadow) / `text-glow`·`text-glow-sm`(text-shadow) 유틸리티로 뺐다 — 화면마다 `shadow-[0_0_34px_...]` 같은 임의값을 새로 재지 않는다.
+
+**중요: 마스코트 PNG(투명 배경 누끼) 같은 알파 채널 이미지에는 반드시 `drop-shadow-neon-*`를 쓴다, `shadow-neon-*`가 아니라.** `box-shadow`는 엘리먼트의 사각형 레이아웃 박스 기준으로 그려져서, 이미지 캔버스 안의 투명한 여백(마스코트가 포즈 때문에 정사각형을 꽉 안 채우는 부분)까지 포함한 네모난 박스가 그대로 비쳐 보인다 — "캐릭터 뒤에 각진 배경이 생겼다"처럼 보이는 버그의 원인이었다. `filter: drop-shadow()`는 알파 채널의 실제 실루엣을 따라가므로 이미지에는 이쪽을 쓴다. 카드·배지·바처럼 투명 영역 없이 박스 자체가 곧 보이는 모양인 엘리먼트는 `shadow-neon-*`(box-shadow)가 맞다.
 
 **앱은 다크 전용이다(라이트 모드 없음).** `index.html`의 인라인 스크립트가 마운트 전에 `localStorage.theme = "dark"`를 고정하고, `main.tsx`는 `<ThemeProvider enableDarkMode>`를 쓴다 — `enableDarkMode` 없이는 WDS가 강제로 라이트 모드로 되돌린다(`forcedTheme: "light"`).
 

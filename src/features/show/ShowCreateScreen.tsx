@@ -34,7 +34,7 @@ function ShowCreateScreen() {
           </Typography>
         </div>
 
-        <label className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2" htmlFor="show-name">
           <Typography
             color="semantic.label.normal"
             variant="label1"
@@ -42,11 +42,15 @@ function ShowCreateScreen() {
           >
             공연 이름
           </Typography>
-          <TextField defaultValue="2026 가을 정기공연" width="100%" />
+          <TextField
+            defaultValue="2026 가을 정기공연"
+            id="show-name"
+            width="100%"
+          />
         </label>
 
         <div className="flex gap-2">
-          <label className="flex flex-1 flex-col gap-2">
+          <label className="flex flex-1 flex-col gap-2" htmlFor="show-date">
             <Typography
               color="semantic.label.normal"
               variant="label1"
@@ -54,9 +58,9 @@ function ShowCreateScreen() {
             >
               공연 날짜
             </Typography>
-            <TextField defaultValue="2026-10-17" width="100%" />
+            <TextField defaultValue="2026-10-17" id="show-date" width="100%" />
           </label>
-          <label className="flex flex-1 flex-col gap-2">
+          <label className="flex flex-1 flex-col gap-2" htmlFor="show-time">
             <Typography
               color="semantic.label.normal"
               variant="label1"
@@ -64,11 +68,11 @@ function ShowCreateScreen() {
             >
               시작 시간
             </Typography>
-            <TextField defaultValue="18:00" width="100%" />
+            <TextField defaultValue="18:00" id="show-time" width="100%" />
           </label>
         </div>
 
-        <label className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2" htmlFor="show-place">
           <Typography
             color="semantic.label.normal"
             variant="label1"
@@ -76,10 +80,10 @@ function ShowCreateScreen() {
           >
             장소
           </Typography>
-          <TextField defaultValue="홍대 롤링홀" width="100%" />
+          <TextField defaultValue="홍대 롤링홀" id="show-place" width="100%" />
         </label>
 
-        <label className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2" htmlFor="show-description">
           <Typography
             color="semantic.label.normal"
             variant="label1"
@@ -88,6 +92,7 @@ function ShowCreateScreen() {
             공연 설명
           </Typography>
           <TextArea
+            id="show-description"
             minRows={2}
             placeholder="공연을 소개해 주세요"
             width="100%"

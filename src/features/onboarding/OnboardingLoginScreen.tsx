@@ -34,7 +34,7 @@ function OnboardingLoginScreen() {
         </div>
         <img
           alt="모여락 마스코트"
-          className="relative size-[210px] shadow-neon-lg"
+          className="relative size-[210px] drop-shadow-neon-lg"
           src={mascotFriendly}
         />
         <div className="relative flex flex-col items-center text-center">

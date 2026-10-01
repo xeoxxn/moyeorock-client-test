@@ -13,10 +13,14 @@ function CrewNewCompleteScreen() {
       <div className="relative flex flex-1 flex-col items-center justify-center gap-4 px-6">
         <img
           alt=""
-          className="-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute top-1/2 left-1/2 h-[220px] w-[250px]"
+          className="pointer-events-none absolute top-1/2 left-1/2 h-[220px] w-[250px] -translate-x-1/2 -translate-y-1/2"
           src={neonGlow}
         />
-        <img alt="" className="relative size-[180px] shadow-neon-lg" src={mascotMegaphone} />
+        <img
+          alt=""
+          className="relative size-[180px] drop-shadow-neon-lg"
+          src={mascotMegaphone}
+        />
         <Typography
           as="p"
           className="relative text-center"
