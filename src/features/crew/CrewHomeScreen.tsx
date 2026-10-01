@@ -217,7 +217,12 @@ function CrewHomeScreen() {
           </Typography>
         </div>
         {RECENT_NOTICES.map((notice) => (
-          <div className="flex items-center gap-2 py-3" key={notice.id}>
+          <button
+            className="flex items-center gap-2 py-3 text-left"
+            key={notice.id}
+            onClick={() => navigate(`/crew/${crewId}/notice/${notice.id}/edit`)}
+            type="button"
+          >
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <Typography
                 color="semantic.label.normal"
@@ -235,7 +240,7 @@ function CrewHomeScreen() {
               </Typography>
             </div>
             <IconChevronRight className="size-4 shrink-0 text-label-assistive" />
-          </div>
+          </button>
         ))}
       </div>
     </div>

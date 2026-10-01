@@ -11,6 +11,7 @@ import neonGlow1 from "@/assets/decorative/neon-glow-home-1.svg";
 import neonGlow2 from "@/assets/decorative/neon-glow-home-2.svg";
 import mascotMusic from "@/assets/mascot/music.png";
 import mascotPeace from "@/assets/mascot/peace.png";
+
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 

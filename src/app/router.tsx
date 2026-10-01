@@ -5,10 +5,16 @@ import ComingSoonScreen from "@/app/ComingSoonScreen";
 import ScreenLayoutRoute, {
   type ScreenRouteHandle,
 } from "@/app/ScreenLayoutRoute";
+import { boardRoutes } from "@/features/board/routes";
+import { crewRoutes } from "@/features/crew/routes";
 import HomeScreen from "@/features/home/HomeScreen";
 import { homeRoutes } from "@/features/home/routes";
+import { mineRoutes } from "@/features/mine/routes";
 import OnboardingLoginScreen from "@/features/onboarding/OnboardingLoginScreen";
 import { onboardingRoutes } from "@/features/onboarding/routes";
+import { scheduleRoutes } from "@/features/schedule/routes";
+import { showRoutes } from "@/features/show/routes";
+import { teamRoutes } from "@/features/team/routes";
 
 // 앱의 모든 라우트는 이 객체 배열 한곳에서 정의한다 — 새 화면은 여기에 라우트를 추가한다.
 // satisfies로 선언 시점에 RouteObject 형태를 검사한다.
@@ -32,6 +38,12 @@ const routes = [
           },
           ...onboardingRoutes,
           ...homeRoutes,
+          ...crewRoutes,
+          ...showRoutes,
+          ...mineRoutes,
+          ...teamRoutes,
+          ...scheduleRoutes,
+          ...boardRoutes,
           // 라우트가 없는 경로 — 레이아웃 안에 둬서 하단 탭이 유지되고, 탭 경로면 그 탭이 활성으로 보인다
           { element: <ComingSoonScreen />, path: "*" },
         ],

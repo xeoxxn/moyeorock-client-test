@@ -1,6 +1,8 @@
 import type { RouteObject } from "react-router-dom";
 
 import type { ScreenRouteHandle } from "@/app/ScreenLayoutRoute";
+import CrewApplicationsScreen from "@/features/crew/CrewApplicationsScreen";
+import CrewFindScreen from "@/features/crew/CrewFindScreen";
 import CrewHomeScreen from "@/features/crew/CrewHomeScreen";
 import CrewListScreen from "@/features/crew/CrewListScreen";
 import CrewManageScreen from "@/features/crew/CrewManageScreen";
@@ -8,6 +10,8 @@ import CrewMembersScreen from "@/features/crew/CrewMembersScreen";
 import CrewNewCompleteScreen from "@/features/crew/CrewNewCompleteScreen";
 import CrewNewStep1Screen from "@/features/crew/CrewNewStep1Screen";
 import CrewNewStep2Screen from "@/features/crew/CrewNewStep2Screen";
+import CrewNoticeEditScreen from "@/features/crew/CrewNoticeEditScreen";
+import CrewNoticeNewScreen from "@/features/crew/CrewNoticeNewScreen";
 import CrewShowScreen from "@/features/crew/CrewShowScreen";
 
 // 모임 섹션 라우트. /crew는 Bottom Nav "모임" 탭의 루트라 hasBottomNav를 기본값(true)으로 둔다.
@@ -48,5 +52,25 @@ export const crewRoutes: RouteObject[] = [
     element: <CrewNewCompleteScreen />,
     handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
     path: "/crew/create/complete",
+  },
+  {
+    element: <CrewFindScreen />,
+    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
+    path: "/crew/find",
+  },
+  {
+    element: <CrewNoticeNewScreen />,
+    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
+    path: "/crew/:crewId/notice/new",
+  },
+  {
+    element: <CrewNoticeEditScreen />,
+    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
+    path: "/crew/:crewId/notice/:noticeId/edit",
+  },
+  {
+    element: <CrewApplicationsScreen />,
+    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
+    path: "/crew/:crewId/applications",
   },
 ];

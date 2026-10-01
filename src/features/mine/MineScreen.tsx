@@ -263,7 +263,11 @@ function MineScreen() {
             전체보기
           </Typography>
         </div>
-        <button className="flex items-center gap-2 py-3" type="button">
+        <button
+          className="flex items-center gap-2 py-3"
+          onClick={() => navigate("/mine/interests")}
+          type="button"
+        >
           <div className="flex min-w-0 flex-1 flex-col">
             <Typography
               color="semantic.label.normal"

@@ -99,13 +99,24 @@ function CrewListScreen() {
             <br />
             먼저 활동할 모임을 선택하세요.
           </Typography>
-          <Typography
-            color="semantic.label.alternative"
-            variant="label2"
-            weight="bold"
-          >
-            내 모임 {MY_CREWS.length}개
-          </Typography>
+          <div className="flex items-center justify-between">
+            <Typography
+              color="semantic.label.alternative"
+              variant="label2"
+              weight="bold"
+            >
+              내 모임 {MY_CREWS.length}개
+            </Typography>
+            <button onClick={() => navigate("/crew/find")} type="button">
+              <Typography
+                color="semantic.primary.normal"
+                variant="label2"
+                weight="bold"
+              >
+                모임 찾기
+              </Typography>
+            </button>
+          </div>
           {MY_CREWS.map((crew) => (
             <button
               className="flex flex-col gap-1 rounded-2xl border border-line-solid bg-surface p-4 text-left"
