@@ -51,6 +51,8 @@ const AI_CANDIDATES: SongCandidate[] = [
 function TeamSetlistAddScreen() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"ai" | "search">("ai");
+  // 곡 추가도 그 자리에서 끝나는 액션이라, 추가한 곡을 로컬로 기억해 둔다.
+  const [addedIds, setAddedIds] = useState<string[]>([]);
 
   useScreenHeader(
     <ScreenHeader
@@ -110,8 +112,13 @@ function TeamSetlistAddScreen() {
                   {song.matchRate}% · {song.reason}
                 </Typography>
               </div>
-              <TextButton color="primary" size="small">
-                추가
+              <TextButton
+                color={addedIds.includes(song.id) ? "assistive" : "primary"}
+                disabled={addedIds.includes(song.id)}
+                onClick={() => setAddedIds((prev) => [...prev, song.id])}
+                size="small"
+              >
+                {addedIds.includes(song.id) ? "추가됨" : "추가"}
               </TextButton>
             </div>
           ))}

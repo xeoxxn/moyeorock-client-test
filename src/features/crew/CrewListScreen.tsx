@@ -6,6 +6,7 @@ import {
 } from "@wanteddev/wds-icon";
 import { useNavigate } from "react-router-dom";
 
+import Badge from "@/components/ui/Badge";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 
 // Figma: 모임/01 모임 목록 (nodeId 101:18601), Bottom Nav "모임" 탭의 루트라 hasBottomNav를 그대로 둔다.
@@ -132,28 +133,8 @@ function CrewListScreen() {
                 >
                   {crew.name}
                 </Typography>
-                {crew.role === "운영진" && (
-                  <div className="rounded-md bg-accent-subtle px-1.5 py-0.5 shadow-neon-sm">
-                    <Typography
-                      color="semantic.primary.normal"
-                      variant="caption2"
-                      weight="medium"
-                    >
-                      운영진
-                    </Typography>
-                  </div>
-                )}
-                {crew.role === "멤버" && (
-                  <div className="rounded-md border border-line-solid px-1.5 py-0.5">
-                    <Typography
-                      color="semantic.label.alternative"
-                      variant="caption2"
-                      weight="medium"
-                    >
-                      멤버
-                    </Typography>
-                  </div>
-                )}
+                {crew.role === "운영진" && <Badge glow>운영진</Badge>}
+                {crew.role === "멤버" && <Badge tone="outline">멤버</Badge>}
               </div>
               <Typography
                 color="semantic.label.alternative"

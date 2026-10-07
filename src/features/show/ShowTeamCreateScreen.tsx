@@ -116,7 +116,8 @@ function ShowTeamCreateScreen() {
           color="primary"
           fullWidth
           size="large"
-          variant="solid"
+          variant="solid" // 만들어진 팀 홈으로 보낸다(백엔드 전이라 팀 id는 고정).
+          onClick={() => navigate("/team/1")}
         >
           팀 만들고 참가하기
         </Button>

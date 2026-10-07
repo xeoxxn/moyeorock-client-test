@@ -1,5 +1,5 @@
 import { ContentBadge, TextButton, Typography } from "@wanteddev/wds";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import TeamHeroTabs from "@/features/team/components/TeamHeroTabs";
 
@@ -20,6 +20,7 @@ const SETLIST: SetlistSong[] = [
 ];
 
 function TeamShowScreen() {
+  const navigate = useNavigate();
   const { teamId = "" } = useParams();
 
   return (
@@ -108,7 +109,11 @@ function TeamShowScreen() {
           >
             이 곡은 어때요?
           </Typography>
-          <TextButton color="primary" size="small">
+          <TextButton
+            color="primary"
+            size="small" // 추천곡 목록은 셋리스트 추가 화면이 들고 있다.
+            onClick={() => navigate(`/team/${teamId}/setlist/add`)}
+          >
             추천곡 보기
           </TextButton>
         </div>

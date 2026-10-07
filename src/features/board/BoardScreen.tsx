@@ -7,8 +7,9 @@ import {
   IconSearch,
 } from "@wanteddev/wds-icon";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
+import Badge from "@/components/ui/Badge";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 
@@ -106,7 +107,15 @@ const POSTS: Post[] = [
 
 function BoardScreen() {
   const navigate = useNavigate();
-  const [category, setCategory] = useState<Category>("crew");
+  // 홈의 "공연 전체"처럼 다른 화면이 특정 탭을 바로 열 수 있도록 ?category=로 초기 탭을 받는다.
+  // 그 뒤 탭 전환은 로컬 state로만 처리한다(탭은 화면 전환이 아니라 목록 필터라 URL을 더럽히지 않는다).
+  const [searchParams] = useSearchParams();
+  const initialCategory = searchParams.get("category");
+  const [category, setCategory] = useState<Category>(
+    initialCategory === "show" || initialCategory === "team"
+      ? initialCategory
+      : "crew",
+  );
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
 
   useScreenHeader(
@@ -200,25 +209,11 @@ function BoardScreen() {
               type="button"
             >
               <div className="flex items-center gap-1.5">
-                <div
-                  className={
-                    post.status === "recruiting"
-                      ? "rounded-md bg-accent-subtle px-1.5 py-0.5"
-                      : "rounded-md border border-line-neutral px-1.5 py-0.5"
-                  }
+                <Badge
+                  tone={post.status === "recruiting" ? "accent" : "outline"}
                 >
-                  <Typography
-                    color={
-                      post.status === "recruiting"
-                        ? "semantic.primary.normal"
-                        : "semantic.label.assistive"
-                    }
-                    variant="caption2"
-                    weight="medium"
-                  >
-                    {post.genreTags[0]}
-                  </Typography>
-                </div>
+                  {post.genreTags[0]}
+                </Badge>
                 <Typography
                   color="semantic.label.assistive"
                   variant="caption1"

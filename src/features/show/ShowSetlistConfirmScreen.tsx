@@ -8,7 +8,7 @@ import {
 } from "@wanteddev/wds";
 import { IconChevronLeft } from "@wanteddev/wds-icon";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
@@ -59,6 +59,7 @@ const TEAM_SETLISTS: TeamSetlist[] = [
 
 function ShowSetlistConfirmScreen() {
   const navigate = useNavigate();
+  const { showId = "" } = useParams();
   const [team, setTeam] = useState(TEAM_SETLISTS[0].teamId);
 
   useScreenHeader(
@@ -128,7 +129,8 @@ function ShowSetlistConfirmScreen() {
           color="primary"
           fullWidth
           size="large"
-          variant="solid"
+          variant="solid" // 확정 완료 화면이 없다 — 확정하면 공연 상세로 돌아간다.
+          onClick={() => navigate(`/show/${showId}`)}
         >
           셋리스트 확정하기
         </Button>

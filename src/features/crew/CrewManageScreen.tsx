@@ -35,9 +35,11 @@ function CrewManageScreen() {
         >
           모임 이름
         </Typography>
-        <TextField width="100%">
-          <input defaultValue="프로젝트 모임" />
-        </TextField>
+        <TextField
+          defaultValue="프로젝트 모임"
+          id="crew-manage-name"
+          width="100%"
+        />
       </div>
 
       <div className="flex flex-col gap-2">
@@ -78,7 +80,14 @@ function CrewManageScreen() {
         </button>
       </div>
 
-      <Button color="primary" fullWidth size="large" variant="solid">
+      <Button
+        color="primary"
+        fullWidth
+        // 저장 완료 화면이 따로 없다 — 저장하면 관리 화면을 닫고 모임 홈으로 돌아간다.
+        onClick={() => navigate(`/crew/${crewId}`)}
+        size="large"
+        variant="solid"
+      >
         변경 내용 저장
       </Button>
 

@@ -1,5 +1,5 @@
 import { Button, Typography } from "@wanteddev/wds";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import TeamHeroTabs from "@/features/team/components/TeamHeroTabs";
 
@@ -24,6 +24,7 @@ const PRACTICES: PracticeSchedule[] = [
 ];
 
 function TeamScheduleScreen() {
+  const navigate = useNavigate();
   const { teamId = "" } = useParams();
 
   return (
@@ -106,6 +107,7 @@ function TeamScheduleScreen() {
           size="large"
           sx={{ backgroundColor: "var(--color-surface)" }}
           variant="outlined"
+          onClick={() => navigate("/schedule/add")}
         >
           합주 일정 추가
         </Button>

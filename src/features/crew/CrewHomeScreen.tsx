@@ -41,7 +41,11 @@ function CrewHomeScreen() {
       <button onClick={() => navigate("/crew")} type="button">
         <IconChevronLeft className="size-6 text-label-normal" />
       </button>
-      <button aria-label="검색" type="button">
+      <button
+        aria-label="검색"
+        onClick={() => navigate("/crew/find")}
+        type="button"
+      >
         <IconSearch className="size-6 text-label-normal" />
       </button>
     </div>,

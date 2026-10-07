@@ -67,6 +67,8 @@ function OnboardingEmailLoginScreen() {
           color="primary"
           disabled={!email || !password}
           fullWidth
+          // 로그인 성공 = 프로필 설정으로 진입. 인증 서버가 붙기 전까지는 입력값만 채워지면 통과한다.
+          onClick={() => navigate("/onboarding/nickname")}
           size="large"
           variant="solid"
         >

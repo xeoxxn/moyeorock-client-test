@@ -72,6 +72,8 @@ function OnboardingLoginScreen() {
         <Button
           color="primary"
           fullWidth
+          // 백엔드가 없으므로 소셜 로그인도 바로 프로필 설정(온보딩 1단계)으로 넘긴다.
+          onClick={() => navigate("/onboarding/nickname")}
           size="large"
           sx={{
             backgroundColor: "var(--color-kakao)",

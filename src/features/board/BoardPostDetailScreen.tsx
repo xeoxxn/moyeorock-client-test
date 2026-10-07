@@ -1,8 +1,8 @@
 import { Button, Typography } from "@wanteddev/wds";
 import { IconBell, IconChevronLeft } from "@wanteddev/wds-icon";
 import { useNavigate } from "react-router-dom";
-
 import mascotMegaphone from "@/assets/mascot/megaphone.png";
+import Badge from "@/components/ui/Badge";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 
@@ -38,15 +38,7 @@ function BoardPostDetailScreen() {
     <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
       <div className="flex flex-col gap-3 px-5 pt-2 pb-6">
         <div className="flex items-center gap-1.5">
-          <div className="rounded-md bg-accent-subtle px-1.5 py-0.5">
-            <Typography
-              color="semantic.primary.normal"
-              variant="caption2"
-              weight="medium"
-            >
-              모집중
-            </Typography>
-          </div>
+          <Badge>모집중</Badge>
           <Typography
             color="semantic.label.assistive"
             variant="caption1"
@@ -212,7 +204,14 @@ function BoardPostDetailScreen() {
       </div>
 
       <div className="flex shrink-0 flex-col bg-surface-elevated px-5 pt-3 pb-[34px]">
-        <Button color="primary" fullWidth size="large" variant="solid">
+        <Button
+          color="primary"
+          fullWidth
+          // 신청 완료 화면이 디자인에 없어서, 신청 후 흐름상 다음인 모임 홈으로 보낸다.
+          onClick={() => navigate("/crew/project-crew")}
+          size="large"
+          variant="solid"
+        >
           참여 신청하기
         </Button>
       </div>
