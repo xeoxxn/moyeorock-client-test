@@ -1,7 +1,7 @@
 import { Typography } from "@wanteddev/wds";
 import { IconLocation, IconPersons } from "@wanteddev/wds-icon";
-
 import mascotFlag from "@/assets/mascot/flag.png";
+import Badge from "@/components/ui/Badge";
 
 interface GroupHeroProps {
   name: string;
@@ -35,16 +35,9 @@ function GroupHero({
             >
               {name}
             </Typography>
-            <div className="rounded-lg bg-accent-subtle px-1.5 py-1">
-              <Typography
-                className="text-glow-sm"
-                color="semantic.primary.strong"
-                variant="caption1"
-                weight="medium"
-              >
-                {typeBadge}
-              </Typography>
-            </div>
+            <Badge glow size="md">
+              {typeBadge}
+            </Badge>
           </div>
           <Typography
             color="semantic.label.alternative"

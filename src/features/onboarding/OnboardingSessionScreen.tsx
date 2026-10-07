@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ScreenHeader from "@/components/ui/ScreenHeader";
+import StepProgress from "@/components/ui/StepProgress";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
-import OnboardingProgress from "@/features/onboarding/components/OnboardingProgress";
 import SelectableChip from "@/features/onboarding/components/SelectableChip";
 
 const SESSIONS = [
@@ -49,7 +49,7 @@ function OnboardingSessionScreen() {
   return (
     <div className="flex h-full w-full flex-col bg-background px-5">
       <div className="flex flex-1 flex-col gap-7 overflow-y-auto pt-2">
-        <OnboardingProgress step={2} total={3} />
+        <StepProgress current={2} total={3} />
         <div className="flex flex-col gap-2">
           <Typography
             color="semantic.label.strong"
