@@ -65,7 +65,8 @@ function ScreenHeader(props: ScreenHeaderProps) {
     >
       {props.title !== undefined && (
         <Typography
-          as="h2"
+          // TopNavigation이 이 슬롯을 이미 <h2>로 감싼다 — 여기서 또 h2를 쓰면 h2가 중첩된다.
+          as="span"
           color="semantic.label.strong"
           variant="headline1"
           weight="bold"
