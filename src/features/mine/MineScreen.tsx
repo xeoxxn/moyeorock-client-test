@@ -6,8 +6,8 @@ import {
 } from "@wanteddev/wds-icon";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import mascotPeace from "@/assets/mascot/peace.png";
+import Chip from "@/components/ui/Chip";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 import WithdrawConfirmModal from "@/features/mine/components/WithdrawConfirmModal";
 
@@ -33,12 +33,18 @@ const ACTIVITY_STATS: ActivityStat[] = [
 interface ActivityItem {
   name: string;
   meta: string;
+  /** 탭하면 열리는 상세 화면. */
+  to: string;
 }
 
 const ACTIVITY_ITEMS: ActivityItem[] = [
-  { meta: "모임 · 운영진", name: "프로젝트 모임" },
-  { meta: "팀 · 멤버", name: "블루 웨이브" },
-  { meta: "공연 · 10월 17일", name: "2026 가을 정기공연" },
+  { meta: "모임 · 운영진", name: "프로젝트 모임", to: "/crew/project-crew" },
+  { meta: "팀 · 멤버", name: "블루 웨이브", to: "/team/1" },
+  {
+    meta: "공연 · 10월 17일",
+    name: "2026 가을 정기공연",
+    to: "/show/fall-2026",
+  },
 ];
 
 interface RecommendedTrack {
@@ -64,18 +70,7 @@ function InfoRow({ label, badges }: { label: string; badges: string[] }) {
       <div className="flex-1" />
       <div className="flex flex-wrap justify-end gap-1.5">
         {badges.map((badge) => (
-          <div
-            className="rounded-md border border-line-solid px-1.5 py-1"
-            key={badge}
-          >
-            <Typography
-              color="semantic.label.assistive"
-              variant="caption1"
-              weight="medium"
-            >
-              {badge}
-            </Typography>
-          </div>
+          <Chip key={badge}>{badge}</Chip>
         ))}
       </div>
     </div>
@@ -96,7 +91,13 @@ function MineScreen() {
       >
         마이
       </Typography>
-      <IconBell className="size-6 text-label-strong" />
+      <button
+        aria-label="알림"
+        onClick={() => navigate("/notifications")}
+        type="button"
+      >
+        <IconBell className="size-6 text-label-strong" />
+      </button>
     </div>,
   );
 
@@ -185,6 +186,7 @@ function MineScreen() {
             <button
               className="flex items-center gap-2 py-3"
               key={item.name}
+              onClick={() => navigate(item.to)}
               type="button"
             >
               <div className="flex min-w-0 flex-1 flex-col">

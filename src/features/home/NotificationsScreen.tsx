@@ -9,6 +9,8 @@ interface PendingNotification {
   title: string;
   meta: string;
   actionLabel: string;
+  /** 액션 버튼이 여는 화면 — 알림 종류마다 다르다. */
+  to: string;
 }
 
 const PENDING: PendingNotification[] = [
@@ -16,11 +18,13 @@ const PENDING: PendingNotification[] = [
     actionLabel: "확인하기",
     meta: "이보컬 · 보컬 · 5분 전",
     title: "홍대 주말 합주에 참가 신청이 왔어요",
+    to: "/crew/project-crew/applications",
   },
   {
     actionLabel: "초대 보기",
     meta: "팀장 서비스 2팀 · 10분 전",
     title: "블루 웨이브에서 팀 초대가 왔어요",
+    to: "/mine/invitations",
   },
 ];
 
@@ -99,7 +103,12 @@ function NotificationsScreen() {
             >
               {item.meta}
             </Typography>
-            <Button color="primary" size="small" variant="solid">
+            <Button
+              color="primary"
+              onClick={() => navigate(item.to)}
+              size="small"
+              variant="solid"
+            >
               {item.actionLabel}
             </Button>
           </div>

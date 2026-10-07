@@ -1,12 +1,18 @@
 import { Button, Typography } from "@wanteddev/wds";
-import { IconChevronDown, IconChevronLeft } from "@wanteddev/wds-icon";
+import { IconChevronLeft } from "@wanteddev/wds-icon";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import SelectField from "@/components/ui/SelectField";
+import StepProgress from "@/components/ui/StepProgress";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 
 // Figma: 모임/09 모임 만들기 - 2단계 (nodeId 101:21112). 3단계 중 마지막 — 활동 지역만 받는다.
+const REGIONS = ["서울", "경기", "인천", "부산", "대구", "온라인"];
+
 function CrewNewStep2Screen() {
   const navigate = useNavigate();
+  const [region, setRegion] = useState(REGIONS[0]);
 
   useScreenHeader(
     <div className="flex h-14 w-full items-center gap-3 px-5">
@@ -26,11 +32,7 @@ function CrewNewStep2Screen() {
   return (
     <div className="flex h-full flex-col">
       <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-5">
-        <div className="flex gap-1">
-          <div className="h-1 flex-1 rounded-full bg-accent-strong shadow-neon-sm" />
-          <div className="h-1 flex-1 rounded-full bg-accent-strong shadow-neon-sm" />
-          <div className="h-1 flex-1 rounded-full bg-accent-strong shadow-neon-sm" />
-        </div>
+        <StepProgress current={2} total={3} />
         <div className="flex flex-col gap-2">
           <Typography
             color="semantic.label.normal"
@@ -57,20 +59,12 @@ function CrewNewStep2Screen() {
           >
             활동 지역
           </Typography>
-          <button
-            className="flex w-full items-center gap-2 rounded-xl bg-surface p-3"
-            type="button"
-          >
-            <Typography
-              className="flex-1 text-left"
-              color="semantic.label.normal"
-              variant="body1"
-              weight="regular"
-            >
-              서울
-            </Typography>
-            <IconChevronDown className="size-4 text-label-normal" />
-          </button>
+          <SelectField
+            onChange={setRegion}
+            options={REGIONS}
+            title="활동 지역"
+            value={region}
+          />
         </div>
       </div>
       <div className="shrink-0 px-5 pt-3 pb-[34px]">

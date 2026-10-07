@@ -1,5 +1,7 @@
 import { Avatar, Typography } from "@wanteddev/wds";
 
+import Badge from "@/components/ui/Badge";
+
 export interface CrewMember {
   id: string;
   name: string;
@@ -39,18 +41,7 @@ function MemberRow({ member, onClick }: MemberRowProps) {
           {member.part}
         </Typography>
       </div>
-      {member.isOwner && (
-        <div className="rounded-lg bg-accent-subtle px-1.5 py-1">
-          <Typography
-            className="text-glow-sm"
-            color="semantic.primary.strong"
-            variant="caption2"
-            weight="bold"
-          >
-            모임장
-          </Typography>
-        </div>
-      )}
+      {member.isOwner && <Badge glow>모임장</Badge>}
     </button>
   );
 }

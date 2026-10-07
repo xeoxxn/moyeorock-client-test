@@ -45,7 +45,11 @@ function TeamHeroTabs({ active, teamId }: TeamHeroTabsProps) {
       <button onClick={() => navigate("/team")} type="button">
         <IconChevronLeft className="size-6 text-label-normal" />
       </button>
-      <button aria-label="검색" type="button">
+      <button
+        aria-label="검색"
+        onClick={() => navigate(`/team/${teamId}/members/find`)}
+        type="button"
+      >
         <IconSearch className="size-6 text-label-normal" />
       </button>
     </div>,

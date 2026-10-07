@@ -70,22 +70,22 @@ function TeamNewTypeScreen() {
                 onClick={() => setType(option.value)}
                 type="button"
               >
-                  <div className="flex items-center gap-2">
-                <Typography
-                  color="semantic.label.normal"
-                  variant="headline2"
-                  weight="bold"
-                >
-                  {option.title}
-                </Typography>
-                <Typography
-                  color="semantic.label.alternative"
-                  variant="label2"
-                  weight="medium"
-                >
-                  {option.description}
-                </Typography>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Typography
+                    color="semantic.label.normal"
+                    variant="headline2"
+                    weight="bold"
+                  >
+                    {option.title}
+                  </Typography>
+                  <Typography
+                    color="semantic.label.alternative"
+                    variant="label2"
+                    weight="medium"
+                  >
+                    {option.description}
+                  </Typography>
+                </div>
               </button>
             );
           })}

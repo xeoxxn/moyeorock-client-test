@@ -107,7 +107,11 @@ function MineInterestsScreen() {
                     {user.meta}
                   </Typography>
                 </div>
-                <TextButton color="primary" size="small">
+                <TextButton
+                  color="primary"
+                  size="small" // 초대 전용 화면이 없어 팀 멤버 찾기(초대) 화면으로 보낸다.
+                  onClick={() => navigate("/team/1/members/find")}
+                >
                   팀 초대
                 </TextButton>
               </div>

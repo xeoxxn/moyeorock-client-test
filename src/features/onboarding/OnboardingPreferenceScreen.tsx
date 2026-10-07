@@ -1,11 +1,11 @@
 import { Button, Typography } from "@wanteddev/wds";
-import { IconChevronDown, IconChevronLeft } from "@wanteddev/wds-icon";
+import { IconChevronLeft } from "@wanteddev/wds-icon";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import ScreenHeader from "@/components/ui/ScreenHeader";
+import SelectField from "@/components/ui/SelectField";
+import StepProgress from "@/components/ui/StepProgress";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
-import OnboardingProgress from "@/features/onboarding/components/OnboardingProgress";
 import SelectableChip from "@/features/onboarding/components/SelectableChip";
 
 const GENRES = [
@@ -22,8 +22,11 @@ const GENRES = [
 // Figma: 온보딩/05 프로필 설정 - 지역·장르 (nodeId 101:11454). 프로필 설정 3단계 중 3단계.
 // "활동 지역" 필드는 실제로는 지역 선택 시트를 열어야 하지만 백엔드/지역 목록이 아직 없어
 // 고정값을 보여주는 트리거 버튼으로만 둔다.
+const REGIONS = ["서울", "경기", "인천", "부산", "대구", "온라인"];
+
 function OnboardingPreferenceScreen() {
   const navigate = useNavigate();
+  const [region, setRegion] = useState(REGIONS[0]);
   const [genres, setGenres] = useState<string[]>(["펑크", "어쿠스틱"]);
 
   useScreenHeader(
@@ -48,7 +51,7 @@ function OnboardingPreferenceScreen() {
   return (
     <div className="flex h-full w-full flex-col bg-background px-5">
       <div className="flex flex-1 flex-col gap-7 overflow-y-auto pt-2">
-        <OnboardingProgress step={3} total={3} />
+        <StepProgress current={3} total={3} />
         <div className="flex flex-col gap-2">
           <Typography
             color="semantic.label.strong"
@@ -75,19 +78,12 @@ function OnboardingPreferenceScreen() {
           >
             활동 지역
           </Typography>
-          <button
-            className="flex h-[52px] w-full items-center justify-between rounded-xl border border-line-solid bg-surface px-4"
-            type="button"
-          >
-            <Typography
-              color="semantic.label.strong"
-              variant="body1"
-              weight="medium"
-            >
-              서울
-            </Typography>
-            <IconChevronDown className="size-[18px] text-label-alternative" />
-          </button>
+          <SelectField
+            onChange={setRegion}
+            options={REGIONS}
+            title="활동 지역"
+            value={region}
+          />
         </div>
         <div className="flex flex-col gap-3">
           <Typography

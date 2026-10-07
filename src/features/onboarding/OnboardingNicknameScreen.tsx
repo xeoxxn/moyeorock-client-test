@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ScreenHeader from "@/components/ui/ScreenHeader";
+import StepProgress from "@/components/ui/StepProgress";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 import FormField from "@/features/onboarding/components/FormField";
-import OnboardingProgress from "@/features/onboarding/components/OnboardingProgress";
 
 // Figma: 온보딩/03 프로필 설정 - 닉네임 (nodeId 101:11375). 프로필 설정 3단계 중 1단계.
 function OnboardingNicknameScreen() {
@@ -27,7 +27,7 @@ function OnboardingNicknameScreen() {
   return (
     <div className="flex h-full w-full flex-col bg-background px-5">
       <div className="flex flex-1 flex-col gap-7 pt-2">
-        <OnboardingProgress step={1} total={3} />
+        <StepProgress current={1} total={3} />
         <div className="flex flex-col gap-2">
           <Typography
             color="semantic.label.strong"

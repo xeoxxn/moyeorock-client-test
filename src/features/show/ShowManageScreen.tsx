@@ -18,13 +18,14 @@ import ShowSectionTabBar from "@/features/show/components/ShowSectionTabBar";
 // ShowSectionTabBar가 공유한다.
 
 interface ManagedTeam {
+  id: string;
   name: string;
   meta: string;
 }
 
 const MANAGED_TEAMS: ManagedTeam[] = [
-  { meta: "메탈 · 멤버 5명", name: "RED NOISE" },
-  { meta: "펑크 · 멤버 4명", name: "문샷" },
+  { id: "2", meta: "메탈 · 멤버 5명", name: "RED NOISE" },
+  { id: "3", meta: "펑크 · 멤버 4명", name: "문샷" },
 ];
 
 function ShowManageScreen() {
@@ -125,7 +126,11 @@ function ShowManageScreen() {
                   {team.meta}
                 </Typography>
               </div>
-              <TextButton color="assistive" size="small">
+              <TextButton
+                color="assistive"
+                size="small"
+                onClick={() => navigate(`/team/${team.id}/manage`)}
+              >
                 관리
               </TextButton>
             </div>

@@ -6,6 +6,9 @@ import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 
 // Figma: 공연/03 공연 만들기 (nodeId 101:23994)
+// 백엔드가 붙기 전까지 "방금 만든 공연"을 가리킬 고정 id. 완료 화면이 이 값으로 상세를 연다.
+const NEW_SHOW_ID = "fall-2026";
+
 function ShowCreateScreen() {
   const navigate = useNavigate();
 
@@ -100,7 +103,13 @@ function ShowCreateScreen() {
         </label>
       </div>
       <div className="flex shrink-0 flex-col gap-2 bg-surface-elevated px-5 pt-3 pb-[34px]">
-        <Button color="primary" fullWidth size="large" variant="solid">
+        <Button
+          color="primary"
+          fullWidth
+          size="large"
+          variant="solid"
+          onClick={() => navigate(`/show/${NEW_SHOW_ID}/complete`)}
+        >
           공연 만들기
         </Button>
       </div>

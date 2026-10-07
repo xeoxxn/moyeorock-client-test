@@ -71,7 +71,14 @@ function TeamManageScreen() {
           />
         </label>
 
-        <Button color="primary" fullWidth size="large" variant="solid">
+        <Button
+          color="primary"
+          fullWidth
+          // 저장 완료 화면이 따로 없다 — 저장하면 팀 홈으로 돌아간다.
+          onClick={() => navigate(`/team/${teamId}`)}
+          size="large"
+          variant="solid"
+        >
           변경 내용 저장
         </Button>
 

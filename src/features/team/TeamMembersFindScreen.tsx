@@ -52,6 +52,8 @@ const AI_CANDIDATES: Candidate[] = [
 function TeamMembersFindScreen() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"ai" | "search">("ai");
+  // 초대는 화면 이동이 아니라 그 자리에서 끝나는 액션이라, 누른 멤버를 로컬로 기억해 둔다.
+  const [invitedIds, setInvitedIds] = useState<string[]>([]);
 
   useScreenHeader(
     <ScreenHeader
@@ -112,8 +114,15 @@ function TeamMembersFindScreen() {
                   추천 {candidate.matchRate}% · {candidate.reason}
                 </Typography>
               </div>
-              <TextButton color="primary" size="small">
-                초대
+              <TextButton
+                color={
+                  invitedIds.includes(candidate.id) ? "assistive" : "primary"
+                }
+                disabled={invitedIds.includes(candidate.id)}
+                onClick={() => setInvitedIds((prev) => [...prev, candidate.id])}
+                size="small"
+              >
+                {invitedIds.includes(candidate.id) ? "초대함" : "초대"}
               </TextButton>
             </div>
           ))}

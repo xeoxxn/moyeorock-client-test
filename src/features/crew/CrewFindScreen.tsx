@@ -6,6 +6,7 @@ import {
 } from "@wanteddev/wds-icon";
 import { useNavigate } from "react-router-dom";
 
+import Badge from "@/components/ui/Badge";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 
 // Figma: 모임/07 모임 찾기 (nodeId 101:20662). Figma에서는 모임 목록 화면 위에 뜨는 바텀시트지만,
@@ -95,15 +96,7 @@ function CrewFindScreen() {
             onClick={() => navigate(`/crew/${crew.id}`)}
             type="button"
           >
-            <div className="rounded-md bg-accent-subtle px-1.5 py-0.5 shadow-neon-sm">
-              <Typography
-                color="semantic.primary.normal"
-                variant="caption2"
-                weight="medium"
-              >
-                모집중
-              </Typography>
-            </div>
+            <Badge glow>모집중</Badge>
             <Typography
               color="semantic.label.normal"
               variant="body1"
