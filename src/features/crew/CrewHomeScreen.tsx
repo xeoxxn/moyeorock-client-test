@@ -1,254 +1,265 @@
 import {
-  ContentBadge,
-  Tab,
-  TabList,
-  TabListItem,
+  ActionArea,
+  ActionAreaButton,
+  Divider,
+  List,
+  ListCell,
+  ListCellContent,
+  TextButton,
   Typography,
 } from "@wanteddev/wds";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconLocation,
-  IconPersons,
-  IconSearch,
-} from "@wanteddev/wds-icon";
+import { IconLocation, IconPersons } from "@wanteddev/wds-icon";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import mascotFlag from "@/assets/mascot/flag.png";
-import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import Badge from "@/components/ui/Badge";
+import BottomActionArea from "@/components/ui/BottomActionArea";
+import BottomSheet from "@/components/ui/BottomSheet";
+import MetaItem from "@/components/ui/MetaItem";
+import PressableCard from "@/components/ui/PressableCard";
+import SectionHeader from "@/components/ui/SectionHeader";
+import Tag from "@/components/ui/Tag";
+import { CrewNotFound } from "@/features/crew/components/CrewFallback";
+import CrewHeroTabs from "@/features/crew/components/CrewHeroTabs";
+import ApplySheet from "@/features/join/ApplySheet";
+import {
+  formatDateTime,
+  formatDotDate,
+  formatShortDate,
+} from "@/lib/domain/format";
+import { PERFORMANCE_STATUS_LABEL } from "@/lib/domain/labels";
+import type { Group, Notice } from "@/lib/domain/types";
+import {
+  getGroup,
+  getGroupPerformances,
+  getMyJoinRequests,
+  getNotices,
+  isUpcoming,
+  toId,
+} from "@/mocks/selectors";
 
-// Figma: 모임/02 모임 홈 (nodeId 101:18968). 상단 "홈 | 공연 | 멤버 | 관리" Tab은 이 화면 내부
-// 패널 전환이 아니라 /crew/:crewId, /crew/:crewId/show, /crew/:crewId/members, /crew/:crewId/manage
-// 네 개의 실제 라우트를 가리키는 탭바라 onValueChange에서 navigate로 처리한다.
-
-interface Notice {
-  id: string;
-  title: string;
-  date: string;
-}
-
-const RECENT_NOTICES: Notice[] = [
-  { date: "09.02", id: "n1", title: "가을 정기공연 참가 신청 안내" },
-  { date: "08.28", id: "n2", title: "9월 합주실 이용 시간 변경" },
-];
-
-function CrewHomeScreen() {
+// Figma: 모임/02 모임 홈 (nodeId 101:18968) — 서버 GroupDetail(다가오는 공연 · 공지)을 그린다.
+// 비회원(myRole null)도 들어온다: 공고·초대로 모임을 알게 된 사람이 여기서 가입 신청을 한다
+// (Figma 플로우 S3-A: 모임/02 → 가입 신청 → 마이/06 내 신청).
+function CrewHome({ group }: { group: Group }) {
   const navigate = useNavigate();
-  const { crewId = "" } = useParams();
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [applyOpen, setApplyOpen] = useState(false);
 
-  useScreenHeader(
-    <div className="flex w-full items-center justify-between px-5 py-4">
-      <button onClick={() => navigate("/crew")} type="button">
-        <IconChevronLeft className="size-6 text-label-normal" />
-      </button>
-      <button
-        aria-label="검색"
-        onClick={() => navigate("/crew/find")}
-        type="button"
-      >
-        <IconSearch className="size-6 text-label-normal" />
-      </button>
-    </div>,
+  const isOwner = group.myRole === "OWNER";
+  const isMember = group.myRole !== null;
+  const nextPerformance = getGroupPerformances(group.id)
+    .filter(isUpcoming)
+    .sort((a, b) => a.performedAt.localeCompare(b.performedAt))[0];
+  const notices = getNotices(group.id);
+  // 대기 중인 신청이 이미 있으면 서버가 중복 신청을 막는다 — 다시 신청하게 두지 않고 내 신청으로 안내한다.
+  const pendingRequest = getMyJoinRequests().find(
+    (request) =>
+      request.targetType === "GROUP" &&
+      request.targetId === group.id &&
+      request.status === "PENDING",
   );
+
+  const openNotice = (item: Notice) => {
+    setNotice(item);
+    setNoticeOpen(true);
+  };
 
   return (
-    <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
-      <div className="flex flex-col gap-3 px-5 pt-1 pb-4">
-        <div className="flex items-center gap-3.5">
-          <div className="flex size-[72px] shrink-0 items-center justify-center rounded-[18px] bg-surface">
-            <img
-              alt=""
-              className="size-[62px] object-contain"
-              src={mascotFlag}
-            />
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <div className="flex items-center gap-1.5">
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="scrollbar-hidden flex-1 overflow-y-auto">
+        <CrewHeroTabs active="home" group={group} />
+
+        <section className="flex flex-col gap-3 px-5 py-6">
+          <SectionHeader
+            actionLabel="공연 전체"
+            onAction={() =>
+              navigate(`/crew/${group.id}/show`, { replace: true })
+            }
+            title="다음 공연"
+          />
+          {nextPerformance ? (
+            <PressableCard
+              onClick={() => navigate(`/show/${nextPerformance.id}`)}
+            >
+              <div className="flex items-center gap-1.5">
+                <Badge size="md">
+                  {PERFORMANCE_STATUS_LABEL[nextPerformance.status]}
+                </Badge>
+                <Tag>{formatDateTime(nextPerformance.performedAt)}</Tag>
+              </div>
               <Typography
-                color="semantic.label.normal"
-                variant="title3"
+                color="semantic.label.strong"
+                variant="headline1"
                 weight="bold"
               >
-                프로젝트 모임
+                {nextPerformance.title}
               </Typography>
-              <ContentBadge
-                accentColor="semantic.primary.normal"
-                color="accent"
-                size="small"
-              >
-                프로젝트형
-              </ContentBadge>
-            </div>
-            <Typography
-              color="semantic.label.alternative"
-              variant="label1"
-              weight="medium"
-            >
-              좋아하는 음악으로 함께 무대를 만드는 모임
-            </Typography>
-          </div>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1">
-            <IconLocation className="size-3.5 text-label-alternative" />
-            <Typography
-              color="semantic.label.alternative"
-              variant="label2"
-              weight="medium"
-            >
-              서울
-            </Typography>
-          </div>
-          <div className="flex items-center gap-1">
-            <IconPersons className="size-3.5 text-label-alternative" />
-            <Typography
-              color="semantic.label.alternative"
-              variant="label2"
-              weight="medium"
-            >
-              멤버 11명
-            </Typography>
-          </div>
-        </div>
-      </div>
-
-      <Tab
-        onValueChange={(value) => {
-          if (value === "show") navigate(`/crew/${crewId}/show`);
-          if (value === "members") navigate(`/crew/${crewId}/members`);
-          if (value === "manage") navigate(`/crew/${crewId}/manage`);
-        }}
-        value="home"
-      >
-        <TabList resize="hug" size="medium">
-          <TabListItem value="home">홈</TabListItem>
-          <TabListItem value="show">공연</TabListItem>
-          <TabListItem value="members">멤버</TabListItem>
-          <TabListItem value="manage">관리</TabListItem>
-        </TabList>
-      </Tab>
-
-      <div className="flex flex-col gap-3 px-5 py-6">
-        <div className="flex items-center gap-1.5">
-          <Typography
-            className="flex-1"
-            color="semantic.label.normal"
-            variant="headline1"
-            weight="bold"
-          >
-            다음 공연
-          </Typography>
-          <button
-            onClick={() => navigate(`/crew/${crewId}/show`)}
-            type="button"
-          >
-            <Typography
-              color="semantic.label.alternative"
-              variant="label1"
-              weight="bold"
-            >
-              공연 전체
-            </Typography>
-          </button>
-        </div>
-        <button
-          className="flex flex-col gap-2.5 rounded-2xl bg-surface p-5 text-left"
-          onClick={() => navigate(`/crew/${crewId}/show`)}
-          type="button"
-        >
-          <div className="flex items-center gap-1.5">
-            <ContentBadge
-              accentColor="semantic.primary.normal"
-              color="accent"
-              size="small"
-            >
-              공연 예정
-            </ContentBadge>
-            <ContentBadge
-              color="neutral"
-              neutralColor="semantic.label.alternative"
-              size="small"
-              variant="outlined"
-            >
-              10월 17일 18:00
-            </ContentBadge>
-          </div>
-          <Typography
-            color="semantic.label.normal"
-            variant="headline1"
-            weight="bold"
-          >
-            2026 가을 정기공연
-          </Typography>
-          <div className="flex items-center gap-1">
-            <IconLocation className="size-3.5 text-label-alternative" />
-            <Typography
-              color="semantic.label.alternative"
-              variant="label2"
-              weight="medium"
-            >
-              홍대 롤링홀
-            </Typography>
-          </div>
-          <Typography
-            color="semantic.label.alternative"
-            variant="label2"
-            weight="medium"
-          >
-            참가 팀 3팀
-          </Typography>
-        </button>
-      </div>
-
-      <div className="h-3 w-full bg-surface" />
-
-      <div className="flex flex-col gap-1 px-5 pt-6 pb-8">
-        <div className="flex items-center gap-1.5 pb-2">
-          <Typography
-            className="flex-1"
-            color="semantic.label.normal"
-            variant="headline1"
-            weight="bold"
-          >
-            최근 공지
-          </Typography>
-          <Typography
-            color="semantic.label.alternative"
-            variant="label1"
-            weight="bold"
-          >
-            전체 보기
-          </Typography>
-        </div>
-        {RECENT_NOTICES.map((notice) => (
-          <button
-            className="flex items-center gap-2 py-3 text-left"
-            key={notice.id}
-            onClick={() => navigate(`/crew/${crewId}/notice/${notice.id}/edit`)}
-            type="button"
-          >
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <Typography
-                color="semantic.label.normal"
-                variant="body1"
-                weight="regular"
-              >
-                {notice.title}
-              </Typography>
+              <div className="flex items-center gap-2.5">
+                <MetaItem icon={<IconLocation />}>
+                  {nextPerformance.venue}
+                </MetaItem>
+                <MetaItem icon={<IconPersons />}>
+                  참가 팀 {nextPerformance.teamIds.length}팀
+                </MetaItem>
+              </div>
+            </PressableCard>
+          ) : (
+            <PressableCard>
               <Typography
                 color="semantic.label.alternative"
-                variant="label2"
-                weight="regular"
+                variant="body2"
+                weight="medium"
               >
-                {notice.date}
+                예정된 공연이 없어요
+              </Typography>
+              {isOwner && (
+                <div className="flex">
+                  <TextButton
+                    color="primary"
+                    onClick={() => navigate(`/crew/${group.id}/show/new`)}
+                    size="small"
+                  >
+                    공연 만들기
+                  </TextButton>
+                </div>
+              )}
+            </PressableCard>
+          )}
+        </section>
+
+        <Divider
+          color="semantic.background.normal.normal"
+          thickness="0.75rem"
+        />
+
+        <section className="flex flex-col gap-1 px-5 pt-6 pb-8">
+          <SectionHeader
+            actionLabel={isOwner ? "공지 쓰기" : undefined}
+            onAction={
+              isOwner
+                ? () => navigate(`/crew/${group.id}/notice/new`)
+                : undefined
+            }
+            title="공지"
+          />
+          {notices.length === 0 ? (
+            <Typography
+              className="py-3"
+              color="semantic.label.assistive"
+              variant="body2"
+              weight="regular"
+            >
+              아직 올라온 공지가 없어요
+            </Typography>
+          ) : (
+            <List>
+              {notices.map((item) => (
+                <ListCell
+                  ellipsis
+                  key={item.id}
+                  textProps={{ caption: formatShortDate(item.createdAt) }}
+                  trailingContent={
+                    // 셀 어디를 눌러도 WDS ListCell이 이 chevron(role=button)을 대신 눌러 준다 —
+                    // onClick을 셀에도 달면 두 번 불린다.
+                    <ListCellContent
+                      aria-label={`${item.title} 공지 보기`}
+                      onClick={() => openNotice(item)}
+                      variant="chevron"
+                    >
+                      {item.isPinned && <Badge>고정</Badge>}
+                    </ListCellContent>
+                  }
+                >
+                  {item.title}
+                </ListCell>
+              ))}
+            </List>
+          )}
+        </section>
+      </div>
+
+      {!isMember &&
+        (pendingRequest ? (
+          <BottomActionArea
+            caption="가입 신청을 보냈어요. 모임장이 승인하면 알림으로 알려드려요."
+            label="내 신청 보기"
+            onClick={() => navigate("/mine/invitations?tab=applied")}
+          />
+        ) : (
+          <BottomActionArea
+            label="가입 신청하기"
+            onClick={() => setApplyOpen(true)}
+          />
+        ))}
+
+      <BottomSheet
+        footer={
+          isOwner && notice ? (
+            <ActionArea variant="strong">
+              <ActionAreaButton
+                onClick={() =>
+                  navigate(`/crew/${group.id}/notice/${notice.id}/edit`)
+                }
+              >
+                수정
+              </ActionAreaButton>
+            </ActionArea>
+          ) : undefined
+        }
+        onOpenChange={setNoticeOpen}
+        open={noticeOpen}
+        title="공지"
+      >
+        {notice && (
+          <div className="flex flex-col gap-1.5 pb-4">
+            <div className="flex items-center gap-1.5">
+              {notice.isPinned && <Badge>고정</Badge>}
+              <Typography
+                color="semantic.label.assistive"
+                variant="label2"
+                weight="medium"
+              >
+                {formatDotDate(notice.createdAt)}
               </Typography>
             </div>
-            <IconChevronRight className="size-4 shrink-0 text-label-assistive" />
-          </button>
-        ))}
-      </div>
+            <Typography
+              color="semantic.label.strong"
+              variant="headline1"
+              weight="bold"
+            >
+              {notice.title}
+            </Typography>
+            <Typography
+              className="whitespace-pre-line pt-2"
+              color="semantic.label.normal"
+              variant="body1"
+              weight="regular"
+            >
+              {notice.body}
+            </Typography>
+          </div>
+        )}
+      </BottomSheet>
+
+      {!isMember && (
+        <ApplySheet
+          onOpenChange={setApplyOpen}
+          open={applyOpen}
+          targetName={group.name}
+          targetType="GROUP"
+        />
+      )}
     </div>
   );
+}
+
+function CrewHomeScreen() {
+  const { crewId } = useParams();
+  const group = getGroup(toId(crewId));
+  if (!group) return <CrewNotFound />;
+  return <CrewHome group={group} />;
 }
 
 export default CrewHomeScreen;
