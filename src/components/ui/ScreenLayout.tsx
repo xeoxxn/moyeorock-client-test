@@ -6,12 +6,10 @@ import BottomNav, {
   BOTTOM_NAV_ORDER,
   type BottomNavValue,
 } from "@/components/ui/BottomNav";
-import { ScreenBackgroundPortalContext } from "@/components/ui/screenBackgroundPortalContext";
 import { ScreenHeaderContext } from "@/components/ui/screenHeaderContext";
-import { ScreenSheetPortalContext } from "@/components/ui/screenSheetPortalContext";
 import { useNativeSafeAreaColors } from "@/components/ui/useNativeSafeAreaColors";
 
-// Bottom Nav 탭 ↔ 라우트 경로 매핑. 화면이 늘어나면 여기에 추가한다.
+// Bottom Nav 탭 ↔ 탭 루트 경로. 탭을 누르면 이 경로로 간다.
 const BOTTOM_NAV_PATHS: Record<BottomNavValue, string> = {
   board: "/board",
   crew: "/crew",
@@ -20,11 +18,22 @@ const BOTTOM_NAV_PATHS: Record<BottomNavValue, string> = {
   schedule: "/schedule",
 };
 
+// 경로 → 활성 탭. 탭 루트만 정확히 비교하면 하위 화면(/team/1 등)에서 엉뚱하게 "홈"이 켜진다.
+// 모임 탭은 모임(/crew)·팀(/team)·공연(/show) 세 도메인을 묶는 탭이라 셋 다 모임으로 본다.
+const TAB_PREFIXES: [string, BottomNavValue][] = [
+  ["/schedule", "schedule"],
+  ["/crew", "crew"],
+  ["/team", "crew"],
+  ["/show", "crew"],
+  ["/board", "board"],
+  ["/mine", "mine"],
+];
+
 function getBottomNavValueFromPath(pathname: string): BottomNavValue {
-  const matched = (
-    Object.entries(BOTTOM_NAV_PATHS) as [BottomNavValue, string][]
-  ).find(([, path]) => path === pathname);
-  return matched?.[0] ?? "home";
+  const matched = TAB_PREFIXES.find(
+    ([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+  return matched?.[1] ?? "home";
 }
 
 interface ScreenLayoutProps {
@@ -45,11 +54,6 @@ interface ScreenLayoutProps {
 // 세이프에어리어는 env(safe-area-inset-*)로 확보한다(index.html의 viewport-fit=cover와 한 쌍).
 function ScreenLayout({ hasBottomNav = true }: ScreenLayoutProps) {
   const [header, setHeader] = useState<ReactNode>(null);
-  const [sheetPortalEl, setSheetPortalEl] = useState<HTMLDivElement | null>(
-    null,
-  );
-  const [backgroundPortalEl, setBackgroundPortalEl] =
-    useState<HTMLDivElement | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const bottomNavValue = getBottomNavValueFromPath(location.pathname);
@@ -74,42 +78,26 @@ function ScreenLayout({ hasBottomNav = true }: ScreenLayoutProps) {
 
   return (
     <ScreenHeaderContext.Provider value={setHeader}>
-      <ScreenSheetPortalContext.Provider value={sheetPortalEl}>
-        <ScreenBackgroundPortalContext.Provider value={backgroundPortalEl}>
-          <div className="view-transition-frame relative flex h-dvh w-full flex-col overflow-hidden bg-background sm:w-[480px] sm:shadow-[0_0_20px_rgba(0,0,0,0.4)]">
-            {/* 화면 전용 배경 포털 대상(네온 글로우 등) — 프레임 안에서 가장 먼저(맨 아래)
-                그려져서, 투명한 헤더까지 자연스럽게 비쳐 보인다. */}
-            <div
-              className="pointer-events-none absolute inset-0"
-              ref={setBackgroundPortalEl}
-            />
-            <div className="relative shrink-0 pt-safe-top">{header}</div>
-            {/* 스크롤 처리는 각 화면이 스스로 결정한다. overflow-y-auto가 동작하려면 자식 높이가
+      <div className="view-transition-frame relative flex h-dvh w-full flex-col overflow-hidden bg-background sm:w-120 sm:shadow-2xl">
+        <div className="relative shrink-0 pt-safe-top">{header}</div>
+        {/* 스크롤 처리는 각 화면이 스스로 결정한다. overflow-y-auto가 동작하려면 자식 높이가
                 명확해야 해서, 화면마다 h-full을 직접 챙기지 않아도 되도록 여기서 기본으로 보장한다. */}
-            <div className="relative flex-1 overflow-hidden">
-              <div className="flex h-full flex-col">
-                <Outlet />
-              </div>
-            </div>
-            {/* view-transition-name이 붙은 자손은 조상(프레임)의 스냅샷에서 빠진다 — 그래서
+        <div className="relative flex-1 overflow-hidden">
+          <div className="flex h-full flex-col">
+            <Outlet />
+          </div>
+        </div>
+        {/* view-transition-name이 붙은 자손은 조상(프레임)의 스냅샷에서 빠진다 — 그래서
                 아래 한 클래스만으로 화면이 미끄러지는 동안 Bottom Nav는 제자리에 남는다. */}
-            {hasBottomNav && (
-              <div className="view-transition-bottom-nav relative shrink-0">
-                <BottomNav
-                  onValueChange={handleBottomNavChange}
-                  value={bottomNavValue}
-                />
-              </div>
-            )}
-            {/* BottomSheet 포털 대상 — 헤더/본문/Bottom Nav보다 위(z-50)에 겹쳐서, 화면 하나가
-                열어도 화면 프레임 전체를 딤 처리할 수 있다. */}
-            <div
-              className="pointer-events-none absolute inset-0 z-50"
-              ref={setSheetPortalEl}
+        {hasBottomNav && (
+          <div className="view-transition-bottom-nav relative shrink-0">
+            <BottomNav
+              onValueChange={handleBottomNavChange}
+              value={bottomNavValue}
             />
           </div>
-        </ScreenBackgroundPortalContext.Provider>
-      </ScreenSheetPortalContext.Provider>
+        )}
+      </div>
     </ScreenHeaderContext.Provider>
   );
 }

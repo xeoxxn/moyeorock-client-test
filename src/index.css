@@ -26,6 +26,10 @@
 
     --semantic-line-normal-neutral: rgba(255, 255, 255, 0.08);
     --semantic-line-solid-neutral: rgba(255, 255, 255, 0.12);
+
+    /* WDS TopNavigation 좌우 여백을 화면 본문 여백(px-5)과 맞춘다 — 기본 16px이라 헤더 아이콘과
+       본문 카드의 왼쪽 끝이 어긋났다. ActionArea는 기본값이 이미 같다. */
+    --wds-top-navigation-padding-x: 1.25rem;
   }
 
   /* WDS ThemeProvider는 기본으로 body 배경을 semantic.background.normal.normal(카드 색,

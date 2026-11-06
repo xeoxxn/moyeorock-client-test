@@ -1,4 +1,4 @@
-import { ThemeProvider } from "@wanteddev/wds";
+import { RegionConfig, ThemeProvider } from "@wanteddev/wds";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
@@ -13,6 +13,9 @@ createRoot(document.getElementById("root")!).render(
         disableDefaultGlobalStyle: WDS 기본 동작은 body 배경을 카드 색으로 칠하는데, 세이프에어리어
         틈으로 비쳐 보이는 body는 캔버스 색이어야 해서 index.css에서 직접 칠한다. */}
     <ThemeProvider disableDefaultGlobalStyle enableDarkMode>
+      {/* 토스트(useToast) 영역을 앱 프레임 폭(데스크톱 sm:w-120 = 30rem)에 맞추고, 하단 탭·하단
+          버튼 영역을 가리지 않게 그 높이만큼 띄운다. WDS 기본값은 1060px 폭 · 바닥 0이다. */}
+      <RegionConfig viewportBottom="6rem" viewportMaxWidth="30rem" />
       <RouterProvider router={router} />
     </ThemeProvider>
   </StrictMode>,
