@@ -1,227 +1,209 @@
-import { Button, Typography } from "@wanteddev/wds";
-import { IconPlus } from "@wanteddev/wds-icon";
+import { TopNavigationButton, Typography } from "@wanteddev/wds";
+import { IconPersons, IconPlus } from "@wanteddev/wds-icon";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import mascotSleep from "@/assets/mascot/sleep.png";
+import Badge from "@/components/ui/Badge";
+import EmptyState from "@/components/ui/EmptyState";
+import MetaItem from "@/components/ui/MetaItem";
+import PressableCard from "@/components/ui/PressableCard";
 import ScreenHeader from "@/components/ui/ScreenHeader";
+import SectionHeader from "@/components/ui/SectionHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
-import MonthCalendar, {
-  toDateKey,
-} from "@/features/schedule/components/MonthCalendar";
+import MonthCalendar from "@/features/schedule/components/MonthCalendar";
+import {
+  formatDate,
+  formatDday,
+  formatTimeRange,
+  isSameDay,
+} from "@/lib/domain/format";
+import type { Rehearsal } from "@/lib/domain/types";
+import { getRehearsals, getTeam } from "@/mocks/selectors";
 
-// Figma: 일정/02 일정 - 다가오는 일정 (nodeId 101:12493). "일정/01 일정 - 비어있음"(101:12181)은
-// 이 화면의 빈 상태 변형이라 별도 라우트가 아니라 UPCOMING_EVENTS 길이로 분기한다.
+// Figma: 일정/02 다가오는 일정 (101:12493) · 일정/01 비어있음 (101:12181 — 같은 화면의 빈 상태).
+// 서버 GET /users/me/rehearsals(내 팀들의 합주)를 보여준다. 합주 상세 화면은 없어서(서버에도 단건 조회
+// 화면 흐름이 없다) 합주를 누르면 그 팀의 일정 탭으로 간다.
 
-interface ScheduleEvent {
-  id: string;
-  date: Date;
-  title: string;
-  place: string;
-  time?: string;
-  isNext?: boolean;
+function RehearsalCard({
+  rehearsal,
+  dday,
+}: {
+  rehearsal: Rehearsal;
+  /** 다가오는 일정 목록에서만 D-day 배지를 붙인다. emphasized = 가장 가까운 합주 */
+  dday?: { emphasized: boolean };
+}) {
+  const navigate = useNavigate();
+  const startsAt = new Date(rehearsal.startsAt);
+  const teamName = getTeam(rehearsal.teamId)?.name;
+  const detail = [
+    formatTimeRange(rehearsal.startsAt, rehearsal.endsAt),
+    rehearsal.place,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <PressableCard
+      aria-label={`${rehearsal.title} — ${teamName ?? ""} 일정 보기`}
+      onClick={() => navigate(`/team/${rehearsal.teamId}/schedule`)}
+    >
+      <div className="flex items-center gap-3.5">
+        <div className="flex w-12 shrink-0 flex-col items-center">
+          <Typography
+            color="semantic.label.assistive"
+            variant="caption1"
+            weight="bold"
+          >
+            {startsAt.getMonth() + 1}월
+          </Typography>
+          <Typography
+            color="semantic.label.normal"
+            variant="headline1"
+            weight="bold"
+          >
+            {startsAt.getDate()}
+          </Typography>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+          <div className="flex w-full min-w-0 items-center gap-1.5">
+            <Typography
+              className="min-w-0 truncate"
+              color="semantic.label.strong"
+              variant="body1"
+              weight="bold"
+            >
+              {rehearsal.title}
+            </Typography>
+            {dday && (
+              <Badge
+                glow={dday.emphasized}
+                tone={dday.emphasized ? "accent" : "outline"}
+              >
+                {formatDday(rehearsal.startsAt)}
+              </Badge>
+            )}
+          </div>
+          <Typography
+            className="w-full truncate"
+            color="semantic.label.alternative"
+            variant="label2"
+            weight="medium"
+          >
+            {detail}
+          </Typography>
+          {teamName && <MetaItem icon={<IconPersons />}>{teamName}</MetaItem>}
+        </div>
+      </div>
+    </PressableCard>
+  );
 }
-
-const TODAY = new Date(2026, 8, 17);
-
-const UPCOMING_EVENTS: ScheduleEvent[] = [
-  {
-    date: new Date(2026, 8, 17),
-    id: "e1",
-    place: "홍대 연습실 A",
-    time: "19:00~21:00",
-    title: "정기 합주 · A팀",
-  },
-  {
-    date: new Date(2026, 8, 20),
-    id: "e2",
-    isNext: true,
-    place: "합주실 A",
-    time: "14:00",
-    title: "전체 합주",
-  },
-  {
-    date: new Date(2026, 9, 16),
-    id: "e3",
-    place: "홍대 롤링홀",
-    time: "18:00",
-    title: "공연 전 리허설",
-  },
-  {
-    date: new Date(2026, 9, 17),
-    id: "e4",
-    place: "홍대 롤링홀 · 프로젝트 모임",
-    time: "18:00",
-    title: "2026 가을 정기공연",
-  },
-];
 
 function ScheduleScreen() {
   const navigate = useNavigate();
-  const [month, setMonth] = useState(
-    new Date(TODAY.getFullYear(), TODAY.getMonth(), 1),
-  );
-  const [selectedDate, setSelectedDate] = useState(TODAY);
+  const today = new Date();
+  const [month, setMonth] = useState(today);
+  const [selectedDate, setSelectedDate] = useState(today);
 
   useScreenHeader(
     <ScreenHeader
       title="일정"
       trailing={
-        <button
-          aria-label="일정 추가"
+        <TopNavigationButton
+          aria-label="합주 일정 추가"
           onClick={() => navigate("/schedule/add")}
-          type="button"
         >
-          <IconPlus className="size-6 text-label-normal" />
-        </button>
+          <IconPlus />
+        </TopNavigationButton>
       }
       variant="title"
     />,
   );
 
-  const markedDateKeys = new Set(
-    UPCOMING_EVENTS.map((event) => toDateKey(event.date)),
+  const rehearsals = getRehearsals();
+  // 오늘 이미 끝난 합주는 "다가오는" 목록에서 뺀다(캘린더에서 그날을 누르면 여전히 보인다).
+  const upcoming = rehearsals.filter(
+    (rehearsal) => new Date(rehearsal.endsAt) >= today,
   );
-  const nextEvent = UPCOMING_EVENTS.find((event) => event.isNext);
+  const dayRehearsals = rehearsals.filter((rehearsal) =>
+    isSameDay(new Date(rehearsal.startsAt), selectedDate),
+  );
+  const isEmpty = upcoming.length === 0 && dayRehearsals.length === 0;
 
   return (
     <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
       <MonthCalendar
-        markedDateKeys={markedDateKeys}
+        markedDates={rehearsals.map(
+          (rehearsal) => new Date(rehearsal.startsAt),
+        )}
         month={month}
         onMonthChange={setMonth}
         onSelectDate={setSelectedDate}
         selectedDate={selectedDate}
       />
-      <div className="h-3 w-full bg-surface" />
+      <div className="h-3 w-full shrink-0 bg-surface" />
 
-      {UPCOMING_EVENTS.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-10 pb-10">
+      {isEmpty ? (
+        <div className="flex flex-1 flex-col items-center justify-center px-5 py-8">
           <img
             alt=""
-            className="size-[120px] drop-shadow-neon-md"
+            className="aspect-square w-1/3 max-w-32 object-contain drop-shadow-neon-md"
             src={mascotSleep}
           />
-          <div className="flex flex-col items-center gap-1.5">
-            <Typography
-              color="semantic.label.strong"
-              variant="headline1"
-              weight="bold"
-            >
-              예정된 일정이 없어요
-            </Typography>
-            <Typography
-              className="text-center"
-              color="semantic.label.alternative"
-              variant="label1"
-              weight="regular"
-            >
-              합주나 연습 일정을 추가해 보세요
-            </Typography>
-          </div>
-          <Button
-            color="primary"
-            onClick={() => navigate("/schedule/add")}
-            size="medium"
-            variant="solid"
-          >
-            일정 추가하기
-          </Button>
+          <EmptyState
+            action={{
+              label: "합주 일정 추가",
+              onClick: () => navigate("/schedule/add"),
+            }}
+            description="팀 합주 일정을 추가하면 여기에 모여요"
+            title="예정된 합주가 없어요"
+          />
         </div>
       ) : (
-        <div className="flex flex-col gap-3 px-5 py-6">
-          {nextEvent && (
-            <div className="flex flex-col rounded-2xl border border-line-solid bg-surface p-4">
-              <Typography
-                className="text-glow-sm"
-                color="semantic.primary.normal"
-                variant="caption1"
-                weight="bold"
-              >
-                D-3 · 다가오는 일정
-              </Typography>
-              <Typography
-                color="semantic.label.normal"
-                variant="body1"
-                weight="bold"
-              >
-                {nextEvent.title}
-              </Typography>
+        <div className="flex flex-col gap-8 px-5 pt-6 pb-8">
+          <section className="flex flex-col gap-3">
+            <SectionHeader
+              title={`${formatDate(selectedDate.toISOString())}${isSameDay(selectedDate, today) ? " · 오늘" : ""}`}
+            />
+            {dayRehearsals.length === 0 ? (
               <Typography
                 color="semantic.label.assistive"
-                variant="label2"
+                variant="label1"
                 weight="medium"
               >
-                {nextEvent.date.getMonth() + 1}월 {nextEvent.date.getDate()}일 (
-                {WEEKDAY_SHORT[nextEvent.date.getDay()]}) {nextEvent.time} ·{" "}
-                {nextEvent.place}
+                이 날은 합주 일정이 없어요
               </Typography>
-            </div>
-          )}
+            ) : (
+              dayRehearsals.map((rehearsal) => (
+                <RehearsalCard key={rehearsal.id} rehearsal={rehearsal} />
+              ))
+            )}
+          </section>
 
-          <div className="flex items-center pt-2">
-            <Typography
-              className="flex-1"
-              color="semantic.label.normal"
-              variant="headline1"
-              weight="bold"
-            >
-              다음 일정
-            </Typography>
-            <Typography
-              color="semantic.label.assistive"
-              variant="label2"
-              weight="medium"
-            >
-              전체 {UPCOMING_EVENTS.length}개
-            </Typography>
-          </div>
-
-          {UPCOMING_EVENTS.map((event) => (
-            <div
-              className="flex items-center gap-3.5 rounded-2xl bg-surface p-4"
-              key={event.id}
-            >
-              <div className="flex w-12 shrink-0 flex-col items-center">
-                <Typography
-                  color="semantic.label.assistive"
-                  variant="caption1"
-                  weight="bold"
-                >
-                  {event.date.getMonth() + 1}월
-                </Typography>
-                <Typography
-                  color="semantic.label.normal"
-                  variant="headline1"
-                  weight="bold"
-                >
-                  {event.date.getDate()}
-                </Typography>
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <Typography
-                  color="semantic.label.normal"
-                  variant="body1"
-                  weight="bold"
-                >
-                  {event.title}
-                </Typography>
-                <Typography
-                  color="semantic.label.assistive"
-                  variant="label2"
-                  weight="medium"
-                >
-                  {event.time} · {event.place}
-                </Typography>
-              </div>
-            </div>
-          ))}
+          <section className="flex flex-col gap-3">
+            <SectionHeader count={upcoming.length} title="다가오는 일정" />
+            {upcoming.length === 0 ? (
+              <Typography
+                color="semantic.label.assistive"
+                variant="label1"
+                weight="medium"
+              >
+                예정된 합주가 없어요
+              </Typography>
+            ) : (
+              upcoming.map((rehearsal, index) => (
+                <RehearsalCard
+                  dday={{ emphasized: index === 0 }}
+                  key={rehearsal.id}
+                  rehearsal={rehearsal}
+                />
+              ))
+            )}
+          </section>
         </div>
       )}
     </div>
   );
 }
-
-const WEEKDAY_SHORT = ["일", "월", "화", "수", "목", "금", "토"];
 
 export default ScheduleScreen;

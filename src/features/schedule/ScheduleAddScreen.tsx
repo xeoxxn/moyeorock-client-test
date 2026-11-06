@@ -1,314 +1,226 @@
-import { TextArea, TextField, Typography } from "@wanteddev/wds";
-import { IconChevronDown, IconClose, IconPlus } from "@wanteddev/wds-icon";
+import {
+  DatePicker,
+  type DateType,
+  FormControl,
+  FormErrorMessage,
+  FormField,
+  FormLabel,
+  TimePicker,
+  useToast,
+} from "@wanteddev/wds";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
+import BottomActionArea from "@/components/ui/BottomActionArea";
+import EmptyState from "@/components/ui/EmptyState";
 import ScreenHeader from "@/components/ui/ScreenHeader";
+import SelectField from "@/components/ui/SelectField";
+import TextInputField from "@/components/ui/TextInputField";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
-import MonthCalendar from "@/features/schedule/components/MonthCalendar";
+import { getMyTeams, toId } from "@/mocks/selectors";
 
-// Figma: 일정/03 일정 추가 (nodeId 101:12846). "일정/05 날짜 선택"(101:13144)과 "일정/06 시간
-// 선택"(101:13396)은 별도 화면이 아니라 이 폼에서 "시작"/"종료" 행을 누르면 그 아래로 캘린더나
-// 시간 휠이 펼쳐지는 같은 화면의 상태 변형이다(두 스크린샷 모두 동일한 제목/장소 필드와 저장
-// 버튼을 그대로 갖고 있고 시작 행만 펼쳐진 모습) — 그래서 /schedule/add/date, /schedule/add/time
-// 라우트를 따로 만들지 않았다.
+// Figma: 일정/03 일정 추가 (101:12846). "일정/05 날짜 선택"(101:13144)·"일정/06 시간 선택"(101:13396)은
+// 이 폼에서 날짜·시간 칸을 눌렀을 때 펼쳐지는 선택기 상태라 라우트가 아니라 WDS DatePicker·TimePicker의
+// 팝오버로 대신한다.
+//
+// 서버: POST /teams/{teamId}/rehearsals {title(필수, 100자), startsAt, endsAt(> startsAt), place, memo}.
+// 합주는 팀 단위라 팀 일정에서 오면(?teamId=) 팀이 고정이고, 일정 탭에서 오면 내 팀 중 하나를 먼저
+// 고른다(Figma 플로우 S5-B "어느 팀? teamId 선택 필요").
 
-type Field = "start" | "end";
-type PickerMode = "none" | "date" | "time";
+const TITLE_MAX = 100;
 
-function formatDateTime(
-  date: Date,
-  period: "오전" | "오후",
-  hour: number,
-  minute: number,
-) {
-  const h = period === "오전" ? hour : hour === 12 ? 12 : hour;
-  return `${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}.  ${period} ${h}:${String(minute).padStart(2, "0")}`;
+function toDateOrNull(value: DateType): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function TimeWheelColumn({
-  options,
-  value,
-  onChange,
-}: {
-  options: string[];
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="scrollbar-hidden flex h-[150px] flex-1 snap-y snap-mandatory flex-col overflow-y-auto py-[60px]">
-      {options.map((option) => (
-        <button
-          className="flex h-10 shrink-0 snap-center items-center justify-center"
-          key={option}
-          onClick={() => onChange(option)}
-          type="button"
-        >
-          <Typography
-            color={
-              option === value
-                ? "semantic.label.strong"
-                : "semantic.label.assistive"
-            }
-            variant={option === value ? "headline2" : "body1"}
-            weight={option === value ? "bold" : "regular"}
-          >
-            {option}
-          </Typography>
-        </button>
-      ))}
-    </div>
-  );
+function atTime(hours: number, minutes = 0): Date {
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+function minutesOfDay(date: Date): number {
+  return date.getHours() * 60 + date.getMinutes();
 }
 
 function ScheduleAddScreen() {
   const navigate = useNavigate();
-  const [title, setTitle] = useState("밴드 합주");
-  const [place, setPlace] = useState("합주실 A");
-  const [activeField, setActiveField] = useState<Field | null>(null);
-  const [pickerMode, setPickerMode] = useState<PickerMode>("none");
+  const toast = useToast();
+  const [searchParams] = useSearchParams();
+  const teamIdParam = searchParams.get("teamId");
+  const myTeams = getMyTeams();
+  const fixedTeam =
+    teamIdParam !== null
+      ? myTeams.find((team) => team.id === toId(teamIdParam))
+      : undefined;
 
-  const [startDate, setStartDate] = useState(new Date(2026, 7, 2));
-  const [startPeriod, setStartPeriod] = useState<"오전" | "오후">("오전");
-  const [startHour, setStartHour] = useState(9);
-  const [startMinute, setStartMinute] = useState(0);
+  const [teamId, setTeamId] = useState(() => {
+    if (fixedTeam) return String(fixedTeam.id);
+    // 팀이 하나뿐이면 고를 게 없으니 미리 채운다.
+    return myTeams.length === 1 ? String(myTeams[0].id) : "";
+  });
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState<Date | null>(null);
+  const [startTime, setStartTime] = useState<Date | null>(() => atTime(19));
+  const [endTime, setEndTime] = useState<Date | null>(() => atTime(21));
+  const [place, setPlace] = useState("");
+  const [memo, setMemo] = useState("");
+  // 모바일에서 칸을 누르면 숫자 키패드 대신 바로 캘린더·시간 목록이 열리게 한다(Figma 05·06처럼).
+  const [dateOpen, setDateOpen] = useState(false);
+  const [startOpen, setStartOpen] = useState(false);
+  const [endOpen, setEndOpen] = useState(false);
 
-  const [endDate, setEndDate] = useState(new Date(2026, 7, 2));
-  const [endPeriod, setEndPeriod] = useState<"오전" | "오후">("오전");
-  const [endHour, setEndHour] = useState(10);
-  const [endMinute, setEndMinute] = useState(0);
+  useScreenHeader(<ScreenHeader title="합주 일정 추가" variant="normal" />);
 
-  useScreenHeader(
-    <ScreenHeader
-      leading={
-        <button onClick={() => navigate(-1)} type="button">
-          <IconClose className="size-6 text-label-normal" />
-        </button>
-      }
-      title="일정 추가"
-      trailing={
-        <button onClick={() => navigate("/schedule")} type="button">
-          <Typography
-            className="text-glow-sm"
-            color="semantic.primary.normal"
-            variant="body1"
-            weight="bold"
-          >
-            저장
-          </Typography>
-        </button>
-      }
-      variant="normal"
-    />,
-  );
+  // 팀 일정에서 넘어온 teamId가 내 팀이 아니면(주소를 직접 고친 경우 등) 폼을 열지 않는다.
+  if (teamIdParam !== null && !fixedTeam) {
+    return (
+      <div className="flex flex-1 flex-col justify-center">
+        <EmptyState
+          description="내가 속한 팀에서만 합주 일정을 추가할 수 있어요"
+          title="팀을 찾을 수 없어요"
+        />
+      </div>
+    );
+  }
 
-  const openPicker = (field: Field, mode: PickerMode) => {
-    if (activeField === field && pickerMode === mode) {
-      setPickerMode("none");
-      setActiveField(null);
-      return;
-    }
-    setActiveField(field);
-    setPickerMode(mode);
+  if (myTeams.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col justify-center">
+        <EmptyState
+          action={{
+            label: "팀 모집 공고 보기",
+            onClick: () => navigate("/board?type=team"),
+          }}
+          description="합주 일정은 팀 단위로 만들어요. 먼저 팀에 들어가 보세요"
+          title="아직 함께하는 팀이 없어요"
+        />
+      </div>
+    );
+  }
+
+  const rangeError =
+    startTime && endTime && minutesOfDay(endTime) <= minutesOfDay(startTime)
+      ? "종료 시간은 시작 시간보다 늦어야 해요"
+      : undefined;
+  const canSave =
+    teamId !== "" &&
+    title.trim() !== "" &&
+    date !== null &&
+    startTime !== null &&
+    endTime !== null &&
+    rangeError === undefined;
+
+  const save = () => {
+    // 목업이라 실제로 저장하지는 않는다. 서버에 붙일 때 startsAt·endsAt = date + 각 시간으로 보낸다.
+    toast({ content: "합주 일정을 추가했어요", variant: "positive" });
+    navigate(fixedTeam ? `/team/${fixedTeam.id}/schedule` : "/schedule", {
+      replace: true,
+    });
   };
 
-  const periodState =
-    activeField === "start"
-      ? {
-          hour: startHour,
-          minute: startMinute,
-          period: startPeriod,
-          setHour: setStartHour,
-          setMinute: setStartMinute,
-          setPeriod: setStartPeriod,
-        }
-      : {
-          hour: endHour,
-          minute: endMinute,
-          period: endPeriod,
-          setHour: setEndHour,
-          setMinute: setEndMinute,
-          setPeriod: setEndPeriod,
-        };
+  const startOfToday = atTime(0);
 
   return (
-    <div className="scrollbar-hidden flex flex-1 flex-col gap-4 overflow-y-auto px-5 pt-2 pb-6">
-      <label className="flex flex-col gap-2" htmlFor="schedule-title">
-        <Typography
-          color="semantic.label.normal"
-          variant="label1"
-          weight="bold"
-        >
-          제목
-        </Typography>
-        <TextField
-          id="schedule-title"
-          onChange={(e) => setTitle(e.target.value)}
+    <>
+      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-8">
+        <SelectField
+          disabled={fixedTeam !== undefined}
+          label="팀"
+          message={fixedTeam ? undefined : "합주 일정은 팀 단위로 추가돼요"}
+          onChange={setTeamId}
+          options={myTeams.map((team) => ({
+            label: team.name,
+            value: String(team.id),
+          }))}
+          placeholder="팀을 골라 주세요"
+          value={teamId}
+        />
+
+        <TextInputField
+          label="제목"
+          maxLength={TITLE_MAX}
+          onChange={setTitle}
+          placeholder="밴드 합주"
           value={title}
-          width="100%"
         />
-      </label>
 
-      <label className="flex flex-col gap-2" htmlFor="schedule-place">
-        <Typography
-          color="semantic.label.normal"
-          variant="label1"
-          weight="bold"
-        >
-          장소
-        </Typography>
-        <TextField
-          id="schedule-place"
-          onChange={(e) => setPlace(e.target.value)}
-          value={place}
-          width="100%"
-        />
-      </label>
-
-      <div className="flex flex-col rounded-xl border border-line-solid px-4">
-        <button
-          className="flex items-center gap-2 border-line-neutral border-b py-4"
-          onClick={() => openPicker("start", "date")}
-          type="button"
-        >
-          <Typography
-            className="flex-1 text-left"
-            color="semantic.label.alternative"
-            variant="body1"
-            weight="medium"
-          >
-            시작
-          </Typography>
-          <Typography
-            color={
-              activeField === "start"
-                ? "semantic.primary.normal"
-                : "semantic.label.normal"
-            }
-            variant="body1"
-            weight="medium"
-          >
-            {formatDateTime(startDate, startPeriod, startHour, startMinute)}
-          </Typography>
-        </button>
-        <button
-          className="flex items-center gap-2 py-4"
-          onClick={() => openPicker("end", "date")}
-          type="button"
-        >
-          <Typography
-            className="flex-1 text-left"
-            color="semantic.label.alternative"
-            variant="body1"
-            weight="medium"
-          >
-            종료
-          </Typography>
-          <Typography
-            color={
-              activeField === "end"
-                ? "semantic.primary.normal"
-                : "semantic.label.normal"
-            }
-            variant="body1"
-            weight="medium"
-          >
-            {formatDateTime(endDate, endPeriod, endHour, endMinute)}
-          </Typography>
-        </button>
-
-        {activeField && pickerMode === "date" && (
-          <div className="-mx-4 border-line-neutral border-t">
-            <MonthCalendar
-              month={activeField === "start" ? startDate : endDate}
-              onMonthChange={
-                activeField === "start" ? setStartDate : setEndDate
-              }
-              onSelectDate={(date) => {
-                if (activeField === "start") setStartDate(date);
-                else setEndDate(date);
-                setPickerMode("time");
-              }}
-              selectedDate={activeField === "start" ? startDate : endDate}
+        <FormField>
+          <FormLabel>날짜</FormLabel>
+          <FormControl>
+            <DatePicker
+              inputMode="none"
+              min={startOfToday}
+              onChange={(value) => setDate(toDateOrNull(value))}
+              onClick={() => setDateOpen(true)}
+              onOpenChange={setDateOpen}
+              open={dateOpen}
+              placeholder="날짜를 골라 주세요"
+              value={date}
+              width="100%"
             />
-          </div>
-        )}
+          </FormControl>
+        </FormField>
 
-        {activeField && pickerMode === "time" && (
-          <div className="-mx-4 flex flex-col border-line-neutral border-t px-4 py-2">
-            <div className="relative flex">
-              <div className="pointer-events-none absolute inset-x-0 top-1/2 h-10 -translate-y-1/2 rounded-lg bg-surface" />
-              <TimeWheelColumn
-                onChange={(v) => periodState.setPeriod(v as "오전" | "오후")}
-                options={["오전", "오후"]}
-                value={periodState.period}
-              />
-              <TimeWheelColumn
-                onChange={(v) => periodState.setHour(Number(v))}
-                options={Array.from({ length: 12 }, (_, i) => String(i + 1))}
-                value={String(periodState.hour)}
-              />
-              <TimeWheelColumn
-                onChange={(v) => periodState.setMinute(Number(v))}
-                options={[
-                  "00",
-                  "05",
-                  "10",
-                  "15",
-                  "20",
-                  "25",
-                  "30",
-                  "35",
-                  "40",
-                  "45",
-                  "50",
-                  "55",
-                ]}
-                value={String(periodState.minute).padStart(2, "0")}
-              />
-            </div>
+        <div className="flex gap-3">
+          <div className="min-w-0 flex-1">
+            <FormField>
+              <FormLabel>시작 시간</FormLabel>
+              <FormControl>
+                <TimePicker
+                  inputMode="none"
+                  onChange={(value) => setStartTime(toDateOrNull(value))}
+                  onClick={() => setStartOpen(true)}
+                  onOpenChange={setStartOpen}
+                  open={startOpen}
+                  value={startTime}
+                  width="100%"
+                />
+              </FormControl>
+            </FormField>
           </div>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Typography
-          color="semantic.label.alternative"
-          variant="label1"
-          weight="bold"
-        >
-          팀
-        </Typography>
-        <div className="flex items-center gap-2 rounded-xl border border-line-solid px-4 py-3.5">
-          <IconPlus className="size-5 text-label-assistive" />
-          <Typography
-            className="flex-1"
-            color="semantic.label.assistive"
-            variant="body1"
-            weight="regular"
-          >
-            블루 웨이브
-          </Typography>
-          <IconChevronDown className="size-5 text-label-assistive" />
+          <div className="min-w-0 flex-1">
+            <FormField>
+              <FormLabel>종료 시간</FormLabel>
+              <FormControl>
+                <TimePicker
+                  inputMode="none"
+                  invalid={rangeError !== undefined}
+                  onChange={(value) => setEndTime(toDateOrNull(value))}
+                  onClick={() => setEndOpen(true)}
+                  onOpenChange={setEndOpen}
+                  open={endOpen}
+                  value={endTime}
+                  width="100%"
+                />
+              </FormControl>
+              <FormErrorMessage>{rangeError}</FormErrorMessage>
+            </FormField>
+          </div>
         </div>
+
+        <TextInputField
+          label="장소"
+          message="선택 사항이에요"
+          onChange={setPlace}
+          placeholder="합주실 A"
+          value={place}
+        />
+
+        <TextInputField
+          label="메모"
+          message="선택 사항이에요"
+          multiline
+          onChange={setMemo}
+          placeholder="준비물이나 연습할 곡을 적어 두세요"
+          value={memo}
+        />
       </div>
 
-      <label className="flex flex-col gap-2" htmlFor="schedule-memo">
-        <Typography
-          color="semantic.label.normal"
-          variant="label1"
-          weight="bold"
-        >
-          메모
-        </Typography>
-        <TextArea
-          id="schedule-memo"
-          minRows={2}
-          placeholder="메모를 입력해 주세요"
-          width="100%"
-        />
-      </label>
-    </div>
+      <BottomActionArea disabled={!canSave} label="저장" onClick={save} />
+    </>
   );
 }
 
