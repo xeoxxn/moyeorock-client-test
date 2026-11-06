@@ -1,75 +1,78 @@
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 
 import type { ScreenRouteHandle } from "@/app/ScreenLayoutRoute";
 import TeamHomeScreen from "@/features/team/TeamHomeScreen";
-import TeamListScreen from "@/features/team/TeamListScreen";
 import TeamManageScreen from "@/features/team/TeamManageScreen";
 import TeamMembersFindScreen from "@/features/team/TeamMembersFindScreen";
 import TeamMembersScreen from "@/features/team/TeamMembersScreen";
 import TeamNewIndependentScreen from "@/features/team/TeamNewIndependentScreen";
+import TeamNewShowSelectScreen from "@/features/team/TeamNewShowSelectScreen";
 import TeamNewTypeScreen from "@/features/team/TeamNewTypeScreen";
 import TeamScheduleScreen from "@/features/team/TeamScheduleScreen";
-import TeamSetlistAddScreen from "@/features/team/TeamSetlistAddScreen";
-import TeamSetlistScreen from "@/features/team/TeamSetlistScreen";
 import TeamShowScreen from "@/features/team/TeamShowScreen";
+import TeamSongsAddScreen from "@/features/team/TeamSongsAddScreen";
+import TeamSongsScreen from "@/features/team/TeamSongsScreen";
 
-// 팀 섹션 라우트. TeamListScreen은 "모임" 탭(/crew)과 세그먼트로 묶인 화면이라 하단 탭을
-// 그대로 둔다(TeamListScreen.tsx 주석 참고). 나머지는 전부 하위 화면이라 hasBottomNav: false.
+const noBottomNav = { hasBottomNav: false } satisfies ScreenRouteHandle;
+
+// 팀. 팀 목록은 모임 탭(/crew?tab=team) 안의 패널이라 /team 자체는 그쪽으로 돌려보낸다.
 //
-// 팀 만들기 흐름은 모임(crew)의 "/crew/create/stepN" 명명 규칙을 따라 "/team/create/*"로 뺐다
-// — TeamListScreen이 이미 "/team/create/type"으로 navigate하고 있어 그 경로에 맞췄다.
-// "공연 참가 팀" 선택지(/team/create/show)는 이번 범위의 Figma 화면 목록에 없어 아직
-// 미구현 — ComingSoonScreen으로 자연스럽게 떨어진다.
+// 팀 종류는 서버 기준 두 가지다 — 공연 팀(공연에 속함, TeamDetail.performance 있음)과 독립 팀.
+// /team/:teamId/show(팀 공연)는 공연 팀에만 있다.
+//
+// 팀 쪽에서는 "셋리스트"라는 말을 쓰지 않는다(서버 결정, 이슈 #85) — 팀은 "선택곡"을 고르고
+// (/team/:teamId/songs), 공연 팀 팀장이 그중 일부를 공연 셋리스트로 넘기면 모임장이 확정한다.
 export const teamRoutes: RouteObject[] = [
-  { element: <TeamListScreen />, path: "/team" },
-  {
-    element: <TeamHomeScreen />,
-    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
-    path: "/team/:teamId",
-  },
-  {
-    element: <TeamShowScreen />,
-    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
-    path: "/team/:teamId/show",
-  },
-  {
-    element: <TeamSetlistScreen />,
-    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
-    path: "/team/:teamId/setlist",
-  },
-  {
-    element: <TeamSetlistAddScreen />,
-    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
-    path: "/team/:teamId/setlist/add",
-  },
-  {
-    element: <TeamScheduleScreen />,
-    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
-    path: "/team/:teamId/schedule",
-  },
-  {
-    element: <TeamMembersScreen />,
-    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
-    path: "/team/:teamId/members",
-  },
-  {
-    element: <TeamMembersFindScreen />,
-    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
-    path: "/team/:teamId/members/find",
-  },
-  {
-    element: <TeamManageScreen />,
-    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
-    path: "/team/:teamId/manage",
-  },
+  { element: <Navigate replace to="/crew?tab=team" />, path: "/team" },
   {
     element: <TeamNewTypeScreen />,
-    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
+    handle: noBottomNav,
     path: "/team/create/type",
   },
   {
     element: <TeamNewIndependentScreen />,
-    handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
+    handle: noBottomNav,
     path: "/team/create/independent",
+  },
+  {
+    element: <TeamNewShowSelectScreen />,
+    handle: noBottomNav,
+    path: "/team/create/show",
+  },
+  { element: <TeamHomeScreen />, handle: noBottomNav, path: "/team/:teamId" },
+  {
+    element: <TeamShowScreen />,
+    handle: noBottomNav,
+    path: "/team/:teamId/show",
+  },
+  {
+    element: <TeamSongsScreen />,
+    handle: noBottomNav,
+    path: "/team/:teamId/songs",
+  },
+  {
+    element: <TeamSongsAddScreen />,
+    handle: noBottomNav,
+    path: "/team/:teamId/songs/add",
+  },
+  {
+    element: <TeamScheduleScreen />,
+    handle: noBottomNav,
+    path: "/team/:teamId/schedule",
+  },
+  {
+    element: <TeamMembersScreen />,
+    handle: noBottomNav,
+    path: "/team/:teamId/members",
+  },
+  {
+    element: <TeamMembersFindScreen />,
+    handle: noBottomNav,
+    path: "/team/:teamId/members/find",
+  },
+  {
+    element: <TeamManageScreen />,
+    handle: noBottomNav,
+    path: "/team/:teamId/manage",
   },
 ];

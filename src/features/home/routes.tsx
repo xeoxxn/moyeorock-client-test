@@ -1,10 +1,12 @@
 import type { RouteObject } from "react-router-dom";
 
 import type { ScreenRouteHandle } from "@/app/ScreenLayoutRoute";
+import HomeScreen from "@/features/home/HomeScreen";
 import NotificationsScreen from "@/features/home/NotificationsScreen";
 
-// 홈 섹션(홈 대시보드 외) 라우트 — src/app/router.tsx가 이 배열을 가져다 합친다.
+// 홈(Bottom Nav "홈" 탭 루트)과 알림.
 export const homeRoutes: RouteObject[] = [
+  { element: <HomeScreen />, path: "/" },
   {
     element: <NotificationsScreen />,
     handle: { hasBottomNav: false } satisfies ScreenRouteHandle,
