@@ -1,48 +1,49 @@
-import { Avatar, Typography } from "@wanteddev/wds";
+import { Avatar, ListCell, ListCellContent } from "@wanteddev/wds";
 
 import Badge from "@/components/ui/Badge";
-
-export interface CrewMember {
-  id: string;
-  name: string;
-  part: string;
-  isOwner?: boolean;
-}
+import { formatInstruments, GROUP_ROLE_LABEL } from "@/lib/domain/labels";
+import type { GroupMember } from "@/lib/domain/types";
 
 interface MemberRowProps {
-  member: CrewMember;
-  onClick?: (member: CrewMember) => void;
+  member: GroupMember;
+  isMe: boolean;
+  onSelect: (member: GroupMember) => void;
 }
 
-// Figma: 모임 멤버 탭의 구성원 행("Row", 예: nodeId 101:19946) — 운영진/일반 구성원 그룹 안에서
-// 반복된다. 모임장에게는 "모임장" Content Badge가 붙는다. 클릭하면 멤버 관리 바텀시트가 열린다
-// (nodeId 142:20947, 운영진에게만 노출되는 액션이라 실제로는 관리 권한이 있을 때만 연결한다).
-function MemberRow({ member, onClick }: MemberRowProps) {
+// Figma: 모임 멤버 탭의 구성원 행(nodeId 101:19946) — 아바타 + 닉네임 + 세션, 모임장·운영진만 역할
+// 배지를 붙인다(일반 멤버는 섹션 제목으로 충분). 눌렀을 때 무엇을 할지(멤버 관리 시트/프로필)는
+// 내 역할에 따라 화면이 정한다.
+function MemberRow({ isMe, member, onSelect }: MemberRowProps) {
   return (
-    <button
-      className="flex w-full items-center gap-3 py-1"
-      onClick={() => onClick?.(member)}
-      type="button"
+    <ListCell
+      alignItems="center"
+      leadingContent={
+        <ListCellContent variant="avatar">
+          <Avatar
+            alt=""
+            size="medium"
+            src={member.profileImage ?? undefined}
+            variant="person"
+          />
+        </ListCellContent>
+      }
+      onClick={() => onSelect(member)}
+      textProps={{
+        caption: formatInstruments(member.instruments),
+        weight: "medium",
+      }}
+      trailingContent={
+        member.role !== "MEMBER" ? (
+          <ListCellContent variant="badge">
+            <Badge glow={member.role === "OWNER"}>
+              {GROUP_ROLE_LABEL[member.role]}
+            </Badge>
+          </ListCellContent>
+        ) : undefined
+      }
     >
-      <Avatar size={40} variant="person" />
-      <div className="flex min-w-0 flex-1 flex-col items-start">
-        <Typography
-          color="semantic.label.normal"
-          variant="body1"
-          weight="medium"
-        >
-          {member.name}
-        </Typography>
-        <Typography
-          color="semantic.label.alternative"
-          variant="label2"
-          weight="regular"
-        >
-          {member.part}
-        </Typography>
-      </div>
-      {member.isOwner && <Badge glow>모임장</Badge>}
-    </button>
+      {isMe ? `${member.nickname} (나)` : member.nickname}
+    </ListCell>
   );
 }
 

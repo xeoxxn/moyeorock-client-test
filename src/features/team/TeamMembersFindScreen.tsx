@@ -1,147 +1,247 @@
 import {
-  Avatar,
-  Tab,
-  TabList,
-  TabListItem,
+  Category,
+  CategoryList,
+  CategoryListItem,
+  List,
+  ListCellContent,
+  SearchField,
   TextButton,
-  TextField,
   Typography,
 } from "@wanteddev/wds";
-import { IconChevronLeft, IconSearch } from "@wanteddev/wds-icon";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import EmptyState from "@/components/ui/EmptyState";
+import { innerClick } from "@/components/ui/listCellEvents";
 import ScreenHeader from "@/components/ui/ScreenHeader";
+import SectionHeader from "@/components/ui/SectionHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import InviteSheet from "@/features/join/InviteSheet";
+import MemberCell from "@/features/team/components/MemberCell";
+import TeamFallback from "@/features/team/components/TeamFallback";
+import {
+  isTeamLeader,
+  useTeamParam,
+} from "@/features/team/components/teamHelpers";
+import {
+  formatInstruments,
+  GENRE_LABEL,
+  INSTRUMENT_LABEL,
+  INSTRUMENT_OPTIONS,
+  LEVEL_LABEL,
+  LEVEL_OPTIONS,
+  REGION_LABEL,
+} from "@/lib/domain/labels";
+import type { Instrument, Team, User } from "@/lib/domain/types";
+import { USERS } from "@/mocks/data";
+import { getSentInvitations } from "@/mocks/selectors";
 
-// Figma: 팀/10 팀원 찾기 (AI 추천) (nodeId 142:19921). "AI 추천"/"닉네임 검색"은 같은 화면
-// 안의 패널 전환이라(별도 라우트로 나갈 근거가 없음) 로컬 state로 처리한다.
-
-interface Candidate {
-  id: string;
-  name: string;
-  session: string;
-  matchRate: number;
-  reason: string;
+// Figma: 팀/10 팀원 찾기 (AI 추천) (nodeId 142:19921) — 팀장만. 검색어가 없으면 세션별 AI 추천
+// (GET /teams/{id}/members/recommendations?instrument), 있으면 닉네임 검색(GET /users/search?nickname)
+// 결과를 보여준다. Figma의 두 탭을 검색창 하나로 합쳤다 — 검색어를 지우면 다시 추천이 보인다.
+// 후보를 누르면 프로필(초대 버튼이 이 팀을 미리 고르도록 teamId를 넘긴다), "초대"는 공용 초대 시트.
+function TeamMembersFindScreen() {
+  const team = useTeamParam();
+  if (!team) return <TeamFallback kind="notFound" />;
+  if (!isTeamLeader(team))
+    return <TeamFallback kind="leaderOnly" team={team} />;
+  return <TeamMembersFindContent team={team} />;
 }
 
-const AI_CANDIDATES: Candidate[] = [
-  {
-    id: "1",
-    matchRate: 92,
-    name: "박드럼",
-    reason: "장르 일치: 록, 활동 지역 동일",
-    session: "드럼 · 고급",
-  },
-  {
-    id: "2",
-    matchRate: 87,
-    name: "최드럼",
-    reason: "장르 일치: 인디",
-    session: "드럼 · 중급",
-  },
-  {
-    id: "3",
-    matchRate: 81,
-    name: "한비트",
-    reason: "실력 중급",
-    session: "드럼 · 중급",
-  },
-];
-
-function TeamMembersFindScreen() {
-  const navigate = useNavigate();
-  const [tab, setTab] = useState<"ai" | "search">("ai");
-  // 초대는 화면 이동이 아니라 그 자리에서 끝나는 액션이라, 누른 멤버를 로컬로 기억해 둔다.
-  const [invitedIds, setInvitedIds] = useState<string[]>([]);
-
-  useScreenHeader(
-    <ScreenHeader
-      leading={
-        <button onClick={() => navigate(-1)} type="button">
-          <IconChevronLeft className="size-6 text-label-normal" />
-        </button>
-      }
-      title="팀원 찾기"
-      variant="normal"
-    />,
+/**
+ * 추천 이유와 점수 — 서버 AI 추천 응답이 붙기 전까지 장르·지역·실력으로 흉내 낸다.
+ * 화면에는 앞의 두 가지만 보여준다.
+ */
+function recommend(user: User, team: Team, instrument: Instrument | null) {
+  const reasons: string[] = [];
+  let score = 0;
+  const sharedGenres = user.genres.filter((genre) =>
+    team.genres.includes(genre),
   );
+  if (sharedGenres.length > 0) {
+    reasons.push(
+      `장르 일치: ${sharedGenres.map((genre) => GENRE_LABEL[genre]).join(", ")}`,
+    );
+    score += sharedGenres.length * 2;
+  }
+  if (user.region === team.region) {
+    reasons.push(`활동 지역 같음: ${REGION_LABEL[user.region]}`);
+    score += 1;
+  }
+  const skill = user.instruments.find((item) => item.instrument === instrument);
+  if (skill) {
+    reasons.push(
+      `${INSTRUMENT_LABEL[skill.instrument]} ${LEVEL_LABEL[skill.level]}`,
+    );
+    score += LEVEL_OPTIONS.indexOf(skill.level);
+  }
+  return { reasons: reasons.slice(0, 2), score };
+}
+
+function TeamMembersFindContent({ team }: { team: Team }) {
+  const navigate = useNavigate();
+  const memberIds = new Set(team.members.map((member) => member.user.id));
+  // 처음엔 팀에 아직 없는 세션부터 추천한다(블루 웨이브면 드럼).
+  const [instrument, setInstrument] = useState<Instrument>(
+    () =>
+      INSTRUMENT_OPTIONS.find(
+        (option) =>
+          !team.members.some((member) => member.instrument === option),
+      ) ?? INSTRUMENT_OPTIONS[0],
+  );
+  const [keyword, setKeyword] = useState("");
+  const [invitedIds, setInvitedIds] = useState(
+    () =>
+      new Set(
+        getSentInvitations("TEAM", team.id)
+          .filter((invitation) => invitation.status === "PENDING")
+          .map((invitation) => invitation.inviteeId),
+      ),
+  );
+  const [invitee, setInvitee] = useState<User | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  useScreenHeader(<ScreenHeader title="팀원 찾기" />);
+
+  const query = keyword.trim();
+  const searching = query !== "";
+  const outsiders = USERS.filter((user) => !memberIds.has(user.id));
+  const candidates = (
+    searching
+      ? outsiders.filter((user) => user.nickname.includes(query))
+      : outsiders.filter((user) =>
+          user.instruments.some((item) => item.instrument === instrument),
+        )
+  )
+    .map((user) => ({
+      user,
+      ...recommend(user, team, searching ? null : instrument),
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  const openInvite = (user: User) => {
+    setInvitee(user);
+    setSheetOpen(true);
+  };
 
   return (
     <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
-      <Tab
-        onValueChange={(value) => setTab(value as "ai" | "search")}
-        value={tab}
-      >
-        <TabList resize="fill" size="large">
-          <TabListItem value="ai">AI 추천</TabListItem>
-          <TabListItem value="search">닉네임 검색</TabListItem>
-        </TabList>
-      </Tab>
+      <div className="px-5 pt-2">
+        <SearchField
+          onChange={(event) => setKeyword(event.target.value)}
+          onReset={() => setKeyword("")}
+          placeholder="닉네임으로 검색"
+          value={keyword}
+          width="100%"
+        />
+      </div>
 
-      {tab === "ai" ? (
-        <div className="flex flex-col gap-1 px-5 pt-4 pb-8">
+      {!searching && (
+        <Category
+          onValueChange={(value) => setInstrument(value as Instrument)}
+          value={instrument}
+        >
+          <CategoryList horizontalPadding size="small" verticalPadding>
+            {INSTRUMENT_OPTIONS.map((option) => (
+              <CategoryListItem key={option} value={option}>
+                {INSTRUMENT_LABEL[option]}
+              </CategoryListItem>
+            ))}
+          </CategoryList>
+        </Category>
+      )}
+
+      <section className="flex flex-col gap-1 px-5 pt-4 pb-8">
+        <SectionHeader
+          count={candidates.length}
+          title={
+            searching
+              ? "닉네임 검색 결과"
+              : `${INSTRUMENT_LABEL[instrument]} 세션 AI 추천`
+          }
+        />
+        {!searching && (
           <Typography
             color="semantic.label.alternative"
             variant="label2"
             weight="medium"
           >
-            드럼 세션 AI 추천 후보예요
+            {team.name}의 장르·지역과 실력을 보고 골랐어요.
           </Typography>
-          {AI_CANDIDATES.map((candidate) => (
-            <div className="flex items-center gap-3 py-3" key={candidate.id}>
-              <Avatar size="medium" variant="person" />
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <Typography
-                  color="semantic.label.strong"
-                  variant="body1"
-                  weight="bold"
-                >
-                  {candidate.name}
-                </Typography>
-                <Typography
-                  color="semantic.label.normal"
-                  variant="label2"
-                  weight="medium"
-                >
-                  {candidate.session}
-                </Typography>
-                <Typography
-                  color="semantic.label.disable"
-                  variant="caption1"
-                  weight="bold"
-                >
-                  추천 {candidate.matchRate}% · {candidate.reason}
-                </Typography>
-              </div>
-              <TextButton
-                color={
-                  invitedIds.includes(candidate.id) ? "assistive" : "primary"
-                }
-                disabled={invitedIds.includes(candidate.id)}
-                onClick={() => setInvitedIds((prev) => [...prev, candidate.id])}
-                size="small"
-              >
-                {invitedIds.includes(candidate.id) ? "초대함" : "초대"}
-              </TextButton>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4 px-5 pt-4 pb-8">
-          <div className="flex items-center gap-2 rounded-xl bg-surface px-3.5 py-3">
-            <IconSearch className="size-5 text-label-disable" />
-            <TextField placeholder="닉네임으로 검색" width="100%" />
-          </div>
-          <Typography
-            className="pt-10 text-center"
-            color="semantic.label.assistive"
-            variant="body2"
-            weight="medium"
-          >
-            닉네임을 검색해서 팀원을 초대해 보세요.
-          </Typography>
-        </div>
+        )}
+
+        {candidates.length === 0 ? (
+          <EmptyState
+            description={
+              searching
+                ? "닉네임을 다시 확인해 주세요."
+                : "다른 세션을 골라 보거나 게시판에 모집 공고를 올려 보세요."
+            }
+            title={searching ? "찾는 사람이 없어요" : "추천할 사람이 없어요"}
+          />
+        ) : (
+          <List>
+            {candidates.map(({ reasons, user }) => {
+              const invited = invitedIds.has(user.id);
+              return (
+                <MemberCell
+                  caption={
+                    <span className="flex flex-col gap-0.5">
+                      <span>{formatInstruments(user.instruments, true)}</span>
+                      <span>
+                        {REGION_LABEL[user.region]}
+                        {user.genres.length > 0 &&
+                          ` · ${user.genres.map((genre) => GENRE_LABEL[genre]).join(", ")}`}
+                      </span>
+                      {reasons.length > 0 && (
+                        <Typography
+                          color="semantic.primary.normal"
+                          variant="caption1"
+                          weight="bold"
+                        >
+                          {reasons.join(" · ")}
+                        </Typography>
+                      )}
+                    </span>
+                  }
+                  key={user.id}
+                  nickname={user.nickname}
+                  onPress={() =>
+                    navigate(`/users/${user.id}?teamId=${team.id}`)
+                  }
+                  trailing={
+                    <ListCellContent variant="button">
+                      <TextButton
+                        color={invited ? "assistive" : "primary"}
+                        disabled={invited}
+                        onClick={innerClick(() => openInvite(user))}
+                        size="small"
+                      >
+                        {invited ? "초대함" : "초대"}
+                      </TextButton>
+                    </ListCellContent>
+                  }
+                />
+              );
+            })}
+          </List>
+        )}
+      </section>
+
+      {invitee && (
+        <InviteSheet
+          defaultTargetKey={`TEAM:${team.id}`}
+          invitee={invitee}
+          // 초대 시트는 열 때의 대상으로 세션 기본값을 잡으므로, 사람이 바뀌면 새로 만든다.
+          key={invitee.id}
+          onInvited={(targetKey) => {
+            if (targetKey === `TEAM:${team.id}`) {
+              setInvitedIds((prev) => new Set(prev).add(invitee.id));
+            }
+          }}
+          onOpenChange={setSheetOpen}
+          open={sheetOpen}
+        />
       )}
     </div>
   );

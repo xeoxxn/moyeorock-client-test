@@ -1,131 +1,305 @@
 import {
   Avatar,
+  List,
+  ListCell,
+  ListCellContent,
   Tab,
   TabList,
   TabListItem,
-  TabPanel,
   TextButton,
+  ToggleIcon,
   Typography,
+  useToast,
 } from "@wanteddev/wds";
-import { IconChevronLeft } from "@wanteddev/wds-icon";
+import {
+  IconBookmark,
+  IconBookmarkFill,
+  IconMusicMicrophone,
+  IconPersons,
+} from "@wanteddev/wds-icon";
+import type { ReactNode } from "react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
+import EmptyState from "@/components/ui/EmptyState";
+import { innerClick, rowClick } from "@/components/ui/listCellEvents";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import InviteSheet from "@/features/join/InviteSheet";
+import CaptionLines from "@/features/mine/components/CaptionLines";
+import {
+  formatInstruments,
+  GENRE_LABEL,
+  REGION_LABEL,
+  TEAM_KIND_LABEL,
+} from "@/lib/domain/labels";
+import type { Bookmark, BookmarkTargetType, User } from "@/lib/domain/types";
+import {
+  getBookmarks,
+  getPostableTargets,
+  getSong,
+  getTeam,
+  getUser,
+} from "@/mocks/selectors";
 
-// Figma: 마이/04 관심 목록 (nodeId 101:25857, "저장 목록"). 유저/팀/곡 3개 탭 중 "유저"만
-// 실제 콘텐츠가 그려져 있어 팀·곡은 빈 상태 문구로 채웠다.
-interface SavedUser {
-  id: string;
-  name: string;
-  role: string;
-  meta: string;
-}
+// Figma: 마이/04 저장 목록 — 서버 북마크 대상은 유저·팀·곡이다(공고·모임은 저장할 수 없다). 탭은
+// ?tab=user|team|song에 묶어서 다른 화면에서 특정 탭으로 바로 열 수 있게 하고, 탭을 바꿀 땐
+// replace로 히스토리를 쌓지 않는다.
 
-const SAVED_USERS: SavedUser[] = [
-  { id: "u1", meta: "서울 · 인디", name: "이보컬", role: "보컬 · 중급" },
-  { id: "u2", meta: "서울 · 메탈", name: "박드럼", role: "드럼 · 고급" },
-  {
-    id: "u3",
-    meta: "서울 · 어쿠스틱",
-    name: "오어쿠",
-    role: "어쿠스틱 · 초급",
-  },
-];
+type InterestTab = "user" | "team" | "song";
 
-function EmptyTabPanel({ label }: { label: string }) {
-  return (
-    <div className="flex flex-1 items-center justify-center py-16">
-      <Typography
-        color="semantic.label.assistive"
-        variant="label1"
-        weight="regular"
-      >
-        {label}
-      </Typography>
-    </div>
-  );
+const TAB_TARGET: Record<InterestTab, BookmarkTargetType> = {
+  song: "SONG",
+  team: "TEAM",
+  user: "USER",
+};
+
+const TAB_LABEL: Record<InterestTab, string> = {
+  song: "곡",
+  team: "팀",
+  user: "유저",
+};
+
+const COUNT_TEXT: Record<InterestTab, (count: number) => string> = {
+  song: (count) => `저장한 곡 ${count}개`,
+  team: (count) => `저장한 팀 ${count}개`,
+  user: (count) => `저장한 유저 ${count}명`,
+};
+
+const EMPTY_TITLE: Record<InterestTab, string> = {
+  song: "아직 저장한 곡이 없어요",
+  team: "아직 저장한 팀이 없어요",
+  user: "아직 저장한 유저가 없어요",
+};
+
+function toTab(value: string | null): InterestTab {
+  return value === "team" || value === "song" ? value : "user";
 }
 
 function MineInterestsScreen() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("user");
+  const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = toTab(searchParams.get("tab"));
+  const bookmarks = getBookmarks();
+  // 저장 취소한 항목은 바로 지우지 않고 빈 아이콘으로 남겨 둔다 — 잘못 눌렀으면 다시 저장할 수 있게.
+  const [unsavedIds, setUnsavedIds] = useState<Set<number>>(new Set());
+  const [invitee, setInvitee] = useState<User | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  // 초대는 팀장(내 팀)·모임장(내 모임)만 보낼 수 있다.
+  const canInvite = getPostableTargets().length > 0;
 
-  useScreenHeader(
-    <ScreenHeader
-      leading={
-        <button onClick={() => navigate(-1)} type="button">
-          <IconChevronLeft className="size-6 text-label-normal" />
-        </button>
-      }
-      title="저장 목록"
-      variant="normal"
-    />,
+  useScreenHeader(<ScreenHeader title="저장 목록" />);
+
+  const items = bookmarks.filter(
+    (bookmark) => bookmark.targetType === TAB_TARGET[tab],
   );
 
+  const toggleSaved = (bookmark: Bookmark, next: boolean) => {
+    setUnsavedIds((prev) => {
+      const updated = new Set(prev);
+      if (next) updated.delete(bookmark.id);
+      else updated.add(bookmark.id);
+      return updated;
+    });
+    toast({
+      content: next ? "다시 저장했어요" : "저장을 취소했어요",
+      variant: "positive",
+    });
+  };
+
+  const saveToggle = (bookmark: Bookmark) => {
+    const saved = !unsavedIds.has(bookmark.id);
+    return (
+      <ToggleIcon
+        active={saved}
+        aria-label={saved ? "저장 취소" : "다시 저장"}
+        onActiveChange={(next) => toggleSaved(bookmark, next)}
+        onClick={innerClick()}
+      >
+        {saved ? <IconBookmarkFill /> : <IconBookmark />}
+      </ToggleIcon>
+    );
+  };
+
+  const deletedRow = (bookmark: Bookmark) => (
+    <ListCell
+      alignItems="center"
+      disableInteraction
+      key={bookmark.id}
+      onClick={rowClick()}
+      textProps={{ color: "semantic.label.assistive" }}
+      trailingContent={
+        <ListCellContent>{saveToggle(bookmark)}</ListCellContent>
+      }
+    >
+      삭제된 항목
+    </ListCell>
+  );
+
+  const renderRow = (bookmark: Bookmark): ReactNode => {
+    if (bookmark.targetType === "USER") {
+      const user = getUser(bookmark.targetId);
+      if (!user) return deletedRow(bookmark);
+      return (
+        <ListCell
+          alignItems="center"
+          key={bookmark.id}
+          leadingContent={
+            <ListCellContent variant="avatar">
+              <Avatar size="large" variant="person" />
+            </ListCellContent>
+          }
+          onClick={rowClick(() => navigate(`/users/${user.id}`))}
+          textProps={{
+            caption: (
+              <CaptionLines
+                lines={[
+                  formatInstruments(user.instruments, true),
+                  [
+                    REGION_LABEL[user.region],
+                    user.genres.map((genre) => GENRE_LABEL[genre]).join(", "),
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
+                ]}
+              />
+            ),
+            weight: "bold",
+          }}
+          trailingContent={
+            <ListCellContent>
+              <div className="flex items-center gap-3">
+                {canInvite && (
+                  <TextButton
+                    color="primary"
+                    onClick={innerClick(() => {
+                      setInvitee(user);
+                      setInviteOpen(true);
+                    })}
+                    size="small"
+                  >
+                    팀 초대
+                  </TextButton>
+                )}
+                {saveToggle(bookmark)}
+              </div>
+            </ListCellContent>
+          }
+        >
+          {user.nickname}
+        </ListCell>
+      );
+    }
+
+    if (bookmark.targetType === "TEAM") {
+      const team = getTeam(bookmark.targetId);
+      if (!team) return deletedRow(bookmark);
+      return (
+        <ListCell
+          alignItems="center"
+          key={bookmark.id}
+          leadingContent={
+            <ListCellContent variant="large-icon">
+              <IconPersons />
+            </ListCellContent>
+          }
+          onClick={rowClick(() => navigate(`/team/${team.id}`))}
+          textProps={{
+            caption: (
+              <CaptionLines
+                lines={[
+                  `${TEAM_KIND_LABEL[team.performanceId !== null ? "performance" : "independent"]} · 멤버 ${team.members.length}명`,
+                  [
+                    REGION_LABEL[team.region],
+                    team.genres.map((genre) => GENRE_LABEL[genre]).join(", "),
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
+                ]}
+              />
+            ),
+            weight: "bold",
+          }}
+          trailingContent={
+            <ListCellContent>{saveToggle(bookmark)}</ListCellContent>
+          }
+        >
+          {team.name}
+        </ListCell>
+      );
+    }
+
+    const song = getSong(bookmark.targetId);
+    if (!song) return deletedRow(bookmark);
+    // 곡은 상세 화면이 없어 행 자체는 누를 곳이 없다 — 저장 아이콘만 누른다.
+    return (
+      <ListCell
+        alignItems="center"
+        disableInteraction
+        key={bookmark.id}
+        leadingContent={
+          <ListCellContent variant="large-icon">
+            <IconMusicMicrophone />
+          </ListCellContent>
+        }
+        onClick={rowClick()}
+        textProps={{ caption: song.artist, weight: "bold" }}
+        trailingContent={
+          <ListCellContent>{saveToggle(bookmark)}</ListCellContent>
+        }
+      >
+        {song.title}
+      </ListCell>
+    );
+  };
+
   return (
-    <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
-      <Tab onValueChange={setTab} value={tab}>
-        <TabList resize="fill">
-          <TabListItem value="user">유저</TabListItem>
-          <TabListItem value="team">팀</TabListItem>
-          <TabListItem value="song">곡</TabListItem>
+    <>
+      <Tab
+        onValueChange={(next) =>
+          setSearchParams({ tab: next }, { replace: true })
+        }
+        value={tab}
+      >
+        <TabList resize="fill" size="medium">
+          {(Object.keys(TAB_LABEL) as InterestTab[]).map((value) => (
+            <TabListItem key={value} value={value}>
+              {TAB_LABEL[value]}
+            </TabListItem>
+          ))}
         </TabList>
-        <TabPanel value="user">
-          <div className="flex flex-col gap-1 px-5 pt-4 pb-8">
+      </Tab>
+      <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto px-5 pt-4 pb-8">
+        {items.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center">
+            <EmptyState
+              description="프로필이나 목록에서 저장 아이콘을 누르면 여기에 모여요"
+              title={EMPTY_TITLE[tab]}
+            />
+          </div>
+        ) : (
+          <>
             <Typography
               color="semantic.label.alternative"
               variant="label2"
               weight="bold"
             >
-              저장한 유저 {SAVED_USERS.length}명
+              {COUNT_TEXT[tab](items.length)}
             </Typography>
-            {SAVED_USERS.map((user) => (
-              <div className="flex items-center gap-3 py-3" key={user.id}>
-                <Avatar size={48} variant="person" />
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <Typography
-                    color="semantic.label.normal"
-                    variant="body1"
-                    weight="bold"
-                  >
-                    {user.name}
-                  </Typography>
-                  <Typography
-                    color="semantic.label.alternative"
-                    variant="label2"
-                    weight="medium"
-                  >
-                    {user.role}
-                  </Typography>
-                  <Typography
-                    color="semantic.label.disable"
-                    variant="caption1"
-                    weight="bold"
-                  >
-                    {user.meta}
-                  </Typography>
-                </div>
-                <TextButton
-                  color="primary"
-                  size="small" // 초대 전용 화면이 없어 팀 멤버 찾기(초대) 화면으로 보낸다.
-                  onClick={() => navigate("/team/1/members/find")}
-                >
-                  팀 초대
-                </TextButton>
-              </div>
-            ))}
-          </div>
-        </TabPanel>
-        <TabPanel value="team">
-          <EmptyTabPanel label="아직 저장한 팀이 없어요" />
-        </TabPanel>
-        <TabPanel value="song">
-          <EmptyTabPanel label="아직 저장한 곡이 없어요" />
-        </TabPanel>
-      </Tab>
-    </div>
+            <List>{items.map(renderRow)}</List>
+          </>
+        )}
+      </div>
+      {invitee && (
+        <InviteSheet
+          invitee={invitee}
+          key={invitee.id}
+          onOpenChange={setInviteOpen}
+          open={inviteOpen}
+        />
+      )}
+    </>
   );
 }
 

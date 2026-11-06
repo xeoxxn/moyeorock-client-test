@@ -1,415 +1,314 @@
-import { Typography } from "@wanteddev/wds";
+import {
+  Button,
+  List,
+  ListCell,
+  ListCellContent,
+  Switch,
+  TextButton,
+  TopNavigationButton,
+} from "@wanteddev/wds";
 import {
   IconBell,
-  IconChevronRight,
+  IconChevronRightTightSmall,
   IconMusicMicrophone,
 } from "@wanteddev/wds-icon";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import mascotPeace from "@/assets/mascot/peace.png";
-import Chip from "@/components/ui/Chip";
+import { rowClick } from "@/components/ui/listCellEvents";
+import ScreenHeader from "@/components/ui/ScreenHeader";
+import SectionHeader from "@/components/ui/SectionHeader";
+import { useAppAlert } from "@/components/ui/useAppAlert";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
-import WithdrawConfirmModal from "@/features/mine/components/WithdrawConfirmModal";
+import ActivitySection from "@/features/mine/components/ActivitySection";
+import {
+  ProfileHeader,
+  ProfileInfoCard,
+} from "@/features/mine/components/ProfileSummary";
+import { formatDate } from "@/lib/domain/format";
+import {
+  GROUP_ROLE_LABEL,
+  TEAM_KIND_LABEL,
+  TEAM_ROLE_LABEL,
+} from "@/lib/domain/labels";
+import type { Song, User } from "@/lib/domain/types";
+import {
+  getAllSongs,
+  getBookmarks,
+  getMe,
+  getMyGroups,
+  getMyTeams,
+  getMyUpcomingPerformances,
+} from "@/mocks/selectors";
 
-// Figma: 마이/01 마이 (nodeId 101:25091, Bottom Nav "마이" 탭 루트).
-// "마이/07 회원 탈퇴 확인"(142:20559)은 이 화면 위에 뜨는 팝업 모달이라 별도 라우트가 아니라
-// WithdrawConfirmModal 컴포넌트로 아래에서 연다.
+// Figma: 마이/01 마이(Bottom Nav "마이" 탭 루트). "마이/07 회원 탈퇴 확인"은 화면이 아니라 이 화면
+// 위에 뜨는 확인창이라 WDS 확인창(useAppAlert)으로 띄운다.
 
-const SESSION_BADGES = ["어쿠스틱", "입문", "키보드"];
-const TASTE_BADGES = ["펑크"];
-const REGION_BADGES = ["서울"];
-
-interface ActivityStat {
-  label: string;
-  count: number;
-}
-
-const ACTIVITY_STATS: ActivityStat[] = [
-  { count: 1, label: "소속 모임" },
-  { count: 1, label: "소속 팀" },
-  { count: 1, label: "참여 중인 공연" },
-];
-
-interface ActivityItem {
-  name: string;
-  meta: string;
-  /** 탭하면 열리는 상세 화면. */
-  to: string;
-}
-
-const ACTIVITY_ITEMS: ActivityItem[] = [
-  { meta: "모임 · 운영진", name: "프로젝트 모임", to: "/crew/project-crew" },
-  { meta: "팀 · 멤버", name: "블루 웨이브", to: "/team/1" },
-  {
-    meta: "공연 · 10월 17일",
-    name: "2026 가을 정기공연",
-    to: "/show/fall-2026",
-  },
-];
-
-interface RecommendedTrack {
-  title: string;
-  artist: string;
-}
-
-const RECOMMENDED_TRACKS: RecommendedTrack[] = [
-  { artist: "CORTIS", title: "BIRDS" },
-  { artist: "DAY6", title: "한 페이지가 될 수 있게" },
-];
-
-function InfoRow({ label, badges }: { label: string; badges: string[] }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Typography
-        color="semantic.label.assistive"
-        variant="label1"
-        weight="bold"
-      >
-        {label}
-      </Typography>
-      <div className="flex-1" />
-      <div className="flex flex-wrap justify-end gap-1.5">
-        {badges.map((badge) => (
-          <Chip key={badge}>{badge}</Chip>
-        ))}
-      </div>
-    </div>
+/**
+ * 서버 대시보드의 recommendedSongs는 아직 null이다 — 내 음악 취향이나 내 세션으로 칠 수 있는 곡을
+ * 목업에서 골라 둔다.
+ */
+function getRecommendedSongs(user: User): Song[] {
+  const myInstruments = new Set(
+    user.instruments.map((item) => item.instrument),
   );
+  return getAllSongs()
+    .filter(
+      (song) =>
+        user.genres.includes(song.genre) ||
+        song.difficulty.some((item) => myInstruments.has(item.part)),
+    )
+    .slice(0, 3);
+}
+
+/**
+ * 서버는 팀장·모임장이면 탈퇴를 409 WITHDRAW_BLOCKED_BY_ROLE로 막고 어느 팀·모임인지 message에 담는다
+ * (UserWithdrawService.blockedMessage와 같은 문장). 직책이 없으면 null.
+ */
+function getWithdrawBlockedMessage(): string | null {
+  const quoted = (names: string[]) =>
+    names.map((name) => `'${name}'`).join(", ");
+  const ledTeams = getMyTeams()
+    .filter((team) => team.myRole === "LEADER")
+    .map((team) => team.name);
+  const ownedGroups = getMyGroups()
+    .filter((group) => group.myRole === "OWNER")
+    .map((group) => group.name);
+
+  const parts: string[] = [];
+  if (ledTeams.length > 0) parts.push(`팀 ${quoted(ledTeams)}의 팀장을 위임`);
+  if (ownedGroups.length > 0) {
+    parts.push(`모임 ${quoted(ownedGroups)}의 모임장을 위임하거나 모임을 해체`);
+  }
+  return parts.length > 0
+    ? `${parts.join("하고, ")}한 뒤 탈퇴할 수 있어요.`
+    : null;
 }
 
 function MineScreen() {
   const navigate = useNavigate();
-  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const alert = useAppAlert();
+  const me = getMe();
+  // PUT /users/me의 isActivityPublic·isRecommendable. 목업 User에는 isRecommendable이 없어 켜 둔 채로 시작한다.
+  const [activityPublic, setActivityPublic] = useState(me.isActivityPublic);
+  const [recommendable, setRecommendable] = useState(true);
 
   useScreenHeader(
-    <div className="flex items-center justify-between px-5 py-2">
-      <Typography
-        as="h1"
-        color="semantic.label.normal"
-        variant="title3"
-        weight="bold"
-      >
-        마이
-      </Typography>
-      <button
-        aria-label="알림"
-        onClick={() => navigate("/notifications")}
-        type="button"
-      >
-        <IconBell className="size-6 text-label-strong" />
-      </button>
-    </div>,
+    <ScreenHeader
+      title="마이"
+      trailing={
+        <TopNavigationButton
+          aria-label="알림"
+          onClick={() => navigate("/notifications")}
+        >
+          <IconBell />
+        </TopNavigationButton>
+      }
+      variant="title"
+    />,
   );
+
+  const groups = getMyGroups();
+  const teams = getMyTeams();
+  const performances = getMyUpcomingPerformances();
+  const recommendedSongs = getRecommendedSongs(me);
+  const bookmarks = getBookmarks();
+  const bookmarkCount = (type: "USER" | "TEAM" | "SONG") =>
+    bookmarks.filter((bookmark) => bookmark.targetType === type).length;
+
+  // 서버에 로그아웃 API가 없다 — 앱이 들고 있는 토큰만 지우고 로그인 화면으로 보낸다.
+  const logout = async () => {
+    const result = await alert({
+      cancel: "취소",
+      confirm: "로그아웃",
+      content: "다시 로그인하면 이어서 쓸 수 있어요.",
+      title: "로그아웃할까요?",
+    });
+    if (result === "confirm") navigate("/login", { replace: true });
+  };
+
+  const withdraw = async () => {
+    const blockedMessage = getWithdrawBlockedMessage();
+    if (blockedMessage) {
+      await alert({
+        confirm: "확인",
+        content: blockedMessage,
+        title: "아직 탈퇴할 수 없어요",
+      });
+      return;
+    }
+    const result = await alert({
+      cancel: "취소",
+      confirm: "탈퇴하기",
+      content: "소속 모임·팀과 활동 기록이 모두 삭제되고 되돌릴 수 없어요.",
+      title: "정말 탈퇴할까요?",
+    });
+    if (result === "confirm") navigate("/login", { replace: true });
+  };
 
   return (
     <div className="scrollbar-hidden flex-1 overflow-y-auto">
-      <div className="flex flex-col gap-4 px-5 pt-2 pb-6">
-        <div className="flex items-center gap-4">
-          <div className="flex size-[72px] shrink-0 items-center justify-center rounded-full bg-surface">
-            <img alt="" className="size-16" src={mascotPeace} />
-          </div>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <Typography
-              color="semantic.label.normal"
-              variant="title3"
-              weight="bold"
-            >
-              김광철
-            </Typography>
-            <Typography
-              color="semantic.label.normal"
-              variant="body2"
-              weight="medium"
-            >
-              잘 부탁드립니다.
-            </Typography>
-          </div>
-        </div>
-
-        <button
-          className="rounded-[10px] border border-line-solid py-2.5"
+      <section className="flex flex-col gap-4 px-5 pt-2 pb-6">
+        <ProfileHeader user={me} />
+        <Button
+          color="assistive"
+          fullWidth
           onClick={() => navigate("/mine/profile")}
-          type="button"
+          size="medium"
+          variant="outlined"
         >
-          <Typography
-            color="semantic.label.normal"
-            variant="body2"
-            weight="medium"
-          >
-            프로필 수정
-          </Typography>
-        </button>
-
-        <div className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
-          <InfoRow badges={SESSION_BADGES} label="내 세션" />
-          <InfoRow badges={TASTE_BADGES} label="음악 취향" />
-          <InfoRow badges={REGION_BADGES} label="활동 지역" />
-        </div>
-      </div>
-
-      <div className="h-3 w-full bg-surface" />
-
-      <div className="flex flex-col gap-3 px-5 py-6">
-        <Typography
-          color="semantic.label.normal"
-          variant="headline1"
-          weight="bold"
-        >
-          내 활동
-        </Typography>
-        <div className="flex gap-2">
-          {ACTIVITY_STATS.map((stat) => (
-            <div
-              className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl bg-surface px-3 py-4"
-              key={stat.label}
+          프로필 수정
+        </Button>
+        <ProfileInfoCard
+          sessionAction={
+            <TextButton
+              color="assistive"
+              onClick={() => navigate("/mine/session")}
+              size="small"
+              trailingContent={<IconChevronRightTightSmall />}
             >
-              <Typography
-                className="text-glow"
-                color="semantic.primary.normal"
-                variant="title3"
-                weight="bold"
-              >
-                {stat.count}
-              </Typography>
-              <Typography
-                color="semantic.label.assistive"
-                variant="label2"
-                weight="medium"
-              >
-                {stat.label}
-              </Typography>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-col">
-          {ACTIVITY_ITEMS.map((item) => (
-            <button
-              className="flex items-center gap-2 py-3"
-              key={item.name}
-              onClick={() => navigate(item.to)}
-              type="button"
-            >
-              <div className="flex min-w-0 flex-1 flex-col">
-                <Typography
-                  color="semantic.label.normal"
-                  variant="body1"
-                  weight="regular"
+              세션 수정
+            </TextButton>
+          }
+          sessionLabel="내 세션"
+          user={me}
+        />
+      </section>
+
+      <div className="h-3 bg-surface" />
+      <ActivitySection
+        emptyText="아직 소속된 모임·팀이 없어요"
+        links={[
+          ...groups.map((group) => ({
+            caption: `모임 · ${group.myRole ? GROUP_ROLE_LABEL[group.myRole] : ""}`,
+            key: `group-${group.id}`,
+            title: group.name,
+            to: `/crew/${group.id}`,
+          })),
+          ...teams.map((team) => ({
+            caption: `${TEAM_KIND_LABEL[team.performanceId !== null ? "performance" : "independent"]} · ${team.myRole ? TEAM_ROLE_LABEL[team.myRole] : ""}`,
+            key: `team-${team.id}`,
+            title: team.name,
+            to: `/team/${team.id}`,
+          })),
+          ...performances.map((performance) => ({
+            caption: `공연 · ${formatDate(performance.performedAt)}`,
+            key: `show-${performance.id}`,
+            title: performance.title,
+            to: `/show/${performance.id}`,
+          })),
+        ]}
+        stats={[
+          { count: groups.length, label: "소속 모임" },
+          { count: teams.length, label: "소속 팀" },
+          { count: performances.length, label: "참여 중인 공연" },
+        ]}
+        title="내 활동"
+      />
+
+      {recommendedSongs.length > 0 && (
+        <>
+          <div className="h-3 bg-surface" />
+          <section className="flex flex-col gap-1 px-5 py-6">
+            <SectionHeader title="내 취향 추천곡" />
+            <List>
+              {recommendedSongs.map((song) => (
+                <ListCell
+                  alignItems="center"
+                  disableInteraction
+                  key={song.id}
+                  leadingContent={
+                    <ListCellContent variant="large-icon">
+                      <IconMusicMicrophone />
+                    </ListCellContent>
+                  }
+                  textProps={{ caption: song.artist, weight: "bold" }}
                 >
-                  {item.name}
-                </Typography>
-                <Typography
-                  color="semantic.label.assistive"
-                  variant="label2"
-                  weight="regular"
-                >
-                  {item.meta}
-                </Typography>
-              </div>
-              <IconChevronRight className="size-4 shrink-0 text-label-assistive" />
-            </button>
-          ))}
-        </div>
-      </div>
+                  {song.title}
+                </ListCell>
+              ))}
+            </List>
+          </section>
+        </>
+      )}
 
-      <div className="h-3 w-full bg-surface" />
-
-      <div className="flex flex-col gap-1 px-5 py-6">
-        <Typography
-          color="semantic.label.normal"
-          variant="headline1"
-          weight="bold"
-        >
-          내 취향 추천곡
-        </Typography>
-        {RECOMMENDED_TRACKS.map((track) => (
-          <div className="flex items-center gap-3 py-2.5" key={track.title}>
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-[10px] bg-surface">
-              <IconMusicMicrophone className="size-5 text-label-normal" />
-            </div>
-            <div className="flex min-w-0 flex-col">
-              <Typography
-                color="semantic.label.normal"
-                variant="body1"
-                weight="bold"
-              >
-                {track.title}
-              </Typography>
-              <Typography
-                color="semantic.label.assistive"
-                variant="label2"
-                weight="medium"
-              >
-                {track.artist}
-              </Typography>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="h-3 w-full bg-surface" />
-
-      <div className="flex flex-col gap-1 px-5 py-6">
-        <div className="flex items-center justify-between">
-          <Typography
-            color="semantic.label.normal"
-            variant="headline1"
-            weight="bold"
+      <div className="h-3 bg-surface" />
+      <section className="flex flex-col gap-1 px-5 py-6">
+        <SectionHeader
+          actionLabel="전체보기"
+          onAction={() => navigate("/mine/interests")}
+          title="저장 목록"
+        />
+        <List>
+          <ListCell
+            onClick={rowClick(() => navigate("/mine/interests"))}
+            textProps={{
+              caption: `유저 ${bookmarkCount("USER")} · 팀 ${bookmarkCount("TEAM")} · 곡 ${bookmarkCount("SONG")}`,
+            }}
+            trailingContent={<ListCellContent variant="chevron" />}
           >
-            저장 목록
-          </Typography>
-          <Typography
-            color="semantic.label.assistive"
-            variant="label1"
-            weight="bold"
+            저장한 항목
+          </ListCell>
+        </List>
+      </section>
+
+      <div className="h-3 bg-surface" />
+      <section className="flex flex-col gap-1 px-5 pt-6 pb-8">
+        <SectionHeader title="설정" />
+        <List>
+          {/* 스위치 행은 스위치만 누른다 — WDS ListCell은 role="switch"를 대신 눌러 주지 않는다. */}
+          <ListCell
+            alignItems="center"
+            disableInteraction
+            textProps={{
+              caption: "다른 사용자가 내 모임·팀·공연 기록을 볼 수 있어요",
+            }}
+            trailingContent={
+              <ListCellContent variant="switch">
+                <Switch
+                  aria-label="활동 기록 공개"
+                  checked={activityPublic}
+                  onCheckedChange={setActivityPublic}
+                />
+              </ListCellContent>
+            }
           >
-            전체보기
-          </Typography>
-        </div>
-        <button
-          className="flex items-center gap-2 py-3"
-          onClick={() => navigate("/mine/interests")}
-          type="button"
-        >
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Typography
-              color="semantic.label.normal"
-              variant="body1"
-              weight="regular"
-            >
-              저장한 항목
-            </Typography>
-            <Typography
-              color="semantic.label.assistive"
-              variant="label2"
-              weight="regular"
-            >
-              유저 3 · 팀 2 · 곡 1
-            </Typography>
-          </div>
-          <IconChevronRight className="size-4 shrink-0 text-label-assistive" />
-        </button>
-      </div>
-
-      <div className="h-3 w-full bg-surface" />
-
-      <div className="flex flex-col gap-1 px-5 pt-6 pb-8">
-        <Typography
-          color="semantic.label.normal"
-          variant="headline1"
-          weight="bold"
-        >
-          설정
-        </Typography>
-        <div className="flex items-center gap-3 py-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <Typography
-              color="semantic.label.normal"
-              variant="body1"
-              weight="medium"
-            >
-              활동 기록 공개
-            </Typography>
-            <Typography
-              color="semantic.label.assistive"
-              variant="label2"
-              weight="regular"
-            >
-              다른 사용자가 내 모임·팀·공연 기록을 볼 수 있어요
-            </Typography>
-          </div>
-          <MineSwitch defaultChecked />
-        </div>
-        <div className="flex items-center gap-3 py-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <Typography
-              color="semantic.label.normal"
-              variant="body1"
-              weight="medium"
-            >
-              팀원 추천 받기
-            </Typography>
-            <Typography
-              color="semantic.label.assistive"
-              variant="label2"
-              weight="regular"
-            >
-              팀장이 AI 팀원 추천에서 나를 찾을 수 있어요
-            </Typography>
-          </div>
-          <MineSwitch defaultChecked />
-        </div>
-        <button
-          className="flex flex-col items-start gap-0.5 py-3"
-          onClick={() => navigate("/mine/invitations")}
-          type="button"
-        >
-          <Typography
-            color="semantic.label.normal"
-            variant="body1"
-            weight="medium"
+            활동 기록 공개
+          </ListCell>
+          <ListCell
+            alignItems="center"
+            disableInteraction
+            textProps={{
+              caption: "팀장이 AI 팀원 추천에서 나를 찾을 수 있어요",
+            }}
+            trailingContent={
+              <ListCellContent variant="switch">
+                <Switch
+                  aria-label="팀원 추천 받기"
+                  checked={recommendable}
+                  onCheckedChange={setRecommendable}
+                />
+              </ListCellContent>
+            }
+          >
+            팀원 추천 받기
+          </ListCell>
+          <ListCell
+            onClick={rowClick(() => navigate("/mine/invitations"))}
+            textProps={{ caption: "받은 초대와 보낸 가입 신청을 확인해요" }}
+            trailingContent={<ListCellContent variant="chevron" />}
           >
             초대 · 신청
-          </Typography>
-          <Typography
-            color="semantic.label.assistive"
-            variant="label2"
-            weight="regular"
-          >
-            받은 초대와 보낸 가입 신청을 확인해요
-          </Typography>
-        </button>
-        <button
-          className="flex flex-col items-start gap-0.5 py-3"
-          onClick={() => setWithdrawOpen(true)}
-          type="button"
-        >
-          <Typography
-            color="semantic.label.normal"
-            variant="body1"
-            weight="medium"
+          </ListCell>
+          <ListCell onClick={rowClick(logout)}>로그아웃</ListCell>
+          <ListCell
+            onClick={rowClick(withdraw)}
+            textProps={{ caption: "계정과 활동 기록이 모두 삭제돼요" }}
           >
             회원 탈퇴
-          </Typography>
-          <Typography
-            color="semantic.label.assistive"
-            variant="label2"
-            weight="regular"
-          >
-            계정과 활동 기록이 모두 삭제돼요
-          </Typography>
-        </button>
-      </div>
-
-      <WithdrawConfirmModal
-        onConfirm={() => {
-          setWithdrawOpen(false);
-          navigate("/login", { replace: true });
-        }}
-        onOpenChange={setWithdrawOpen}
-        open={withdrawOpen}
-      />
+          </ListCell>
+        </List>
+      </section>
     </div>
-  );
-}
-
-// Figma Switch/Switch — WDS `Switch` 컴포넌트가 없어(패키지에 미포함) 로컬로 만들었다.
-// 켜짐 배경은 브랜드 레드 + 네온 글로우(Figma shadow 0 0 10px rgba(255,59,51,.5)).
-function MineSwitch({ defaultChecked }: { defaultChecked?: boolean }) {
-  const [checked, setChecked] = useState(Boolean(defaultChecked));
-  return (
-    <button
-      aria-checked={checked}
-      className={
-        checked
-          ? "flex h-8 w-[52px] shrink-0 items-center justify-end rounded-full bg-accent-strong p-1 shadow-neon-sm"
-          : "flex h-8 w-[52px] shrink-0 items-center justify-start rounded-full bg-white/10 p-1"
-      }
-      onClick={() => setChecked((v) => !v)}
-      role="switch"
-      type="button"
-    >
-      <span className="size-6 rounded-full bg-static-white" />
-    </button>
   );
 }
 

@@ -1,42 +1,37 @@
-import { Button, TextArea, TextField, Typography } from "@wanteddev/wds";
-import { IconChevronLeft } from "@wanteddev/wds-icon";
+import { Typography } from "@wanteddev/wds";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import SelectField from "@/components/ui/SelectField";
+import BottomActionArea from "@/components/ui/BottomActionArea";
+import ScreenHeader from "@/components/ui/ScreenHeader";
 import StepProgress from "@/components/ui/StepProgress";
+import TextInputField from "@/components/ui/TextInputField";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import { crewCreateDraft } from "@/features/crew/components/crewCreateDraft";
 
-// Figma: 모임/08 모임 만들기 - 1단계 (nodeId 101:20859). 3단계 중 1단계 — 이름/유형/소개.
-// "모임 유형" Select는 실제 드롭다운을 열지 않는 정적 표시다(옵션 목록이 백엔드에 없음).
-const CREW_TYPES = ["상시 운영", "기간 한정", "원데이 모임"];
-
+// Figma: 모임/08 모임 만들기 1단계 (nodeId 101:20859) — 이름 · 소개. Figma는 3단계에 "상시 운영 ·
+// 기간 한정 · 원데이" 유형을 1단계에서 받았지만, 서버 GroupType은 정기형/프로젝트형 둘뿐이고
+// 단계도 2개라 유형은 지역과 함께 2단계로 옮겼다.
 function CrewNewStep1Screen() {
   const navigate = useNavigate();
-  const [crewType, setCrewType] = useState(CREW_TYPES[0]);
+  const [name, setName] = useState(crewCreateDraft.name);
+  const [description, setDescription] = useState(crewCreateDraft.description);
 
-  useScreenHeader(
-    <div className="flex h-14 w-full items-center gap-3 px-5">
-      <button onClick={() => navigate(-1)} type="button">
-        <IconChevronLeft className="size-6 text-label-normal" />
-      </button>
-      <Typography
-        color="semantic.label.normal"
-        variant="headline2"
-        weight="bold"
-      >
-        모임 만들기
-      </Typography>
-    </div>,
-  );
+  useScreenHeader(<ScreenHeader title="모임 만들기" />);
+
+  const next = () => {
+    crewCreateDraft.name = name.trim();
+    crewCreateDraft.description = description.trim();
+    navigate("/crew/create/step2");
+  };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-5">
-        <StepProgress current={1} total={3} />
-        <div className="flex flex-col gap-2">
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-6">
+        <StepProgress current={1} total={2} />
+        <div className="flex flex-col gap-1">
           <Typography
-            color="semantic.label.normal"
+            color="semantic.label.strong"
             variant="title3"
             weight="bold"
           >
@@ -50,62 +45,26 @@ function CrewNewStep1Screen() {
             만들면 내가 모임장이 돼요
           </Typography>
         </div>
-        <div className="flex flex-col gap-2">
-          <Typography
-            color="semantic.label.normal"
-            variant="label1"
-            weight="bold"
-          >
-            모임 이름
-          </Typography>
-          <TextField
-            id="crew-new-name"
-            placeholder="모임 이름을 입력해 주세요"
-            width="100%"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Typography
-            color="semantic.label.normal"
-            variant="label1"
-            weight="bold"
-          >
-            모임 유형
-          </Typography>
-          <SelectField
-            onChange={setCrewType}
-            options={CREW_TYPES}
-            title="모임 유형"
-            value={crewType}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Typography
-            color="semantic.label.normal"
-            variant="label1"
-            weight="bold"
-          >
-            모임 소개
-          </Typography>
-          <TextArea
-            minRows={2}
-            placeholder="모임 소개를 입력해 주세요"
-            width="100%"
-          />
-        </div>
+        <TextInputField
+          label="모임 이름"
+          maxLength={30}
+          onChange={setName}
+          placeholder="모임 이름을 입력해 주세요"
+          value={name}
+        />
+        <TextInputField
+          label="모임 소개"
+          multiline
+          onChange={setDescription}
+          placeholder="어떤 음악을 함께하는 모임인지 알려 주세요"
+          value={description}
+        />
       </div>
-      <div className="shrink-0 px-5 pt-3 pb-[34px]">
-        <Button
-          color="primary"
-          fullWidth
-          onClick={() => navigate("/crew/create/step2")}
-          size="large"
-          sx={{ backgroundColor: "var(--color-accent-strong)" }}
-          variant="solid"
-        >
-          다음
-        </Button>
-      </div>
+      <BottomActionArea
+        disabled={name.trim() === ""}
+        label="다음"
+        onClick={next}
+      />
     </div>
   );
 }

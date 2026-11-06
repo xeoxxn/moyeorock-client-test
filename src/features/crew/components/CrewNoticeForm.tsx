@@ -1,39 +1,47 @@
-import {
-  Button,
-  Checkbox,
-  TextArea,
-  TextField,
-  Typography,
-} from "@wanteddev/wds";
-import { useState } from "react";
+import { Switch, TextButton, Typography } from "@wanteddev/wds";
+import { useId, useState } from "react";
+
+import BottomActionArea from "@/components/ui/BottomActionArea";
+import TextInputField from "@/components/ui/TextInputField";
+
+export interface NoticeFormValues {
+  title: string;
+  body: string;
+  isPinned: boolean;
+}
 
 interface CrewNoticeFormProps {
   heading: string;
   description: string;
-  defaultTitle?: string;
-  defaultContent?: string;
   submitLabel: string;
-  onSubmit: () => void;
+  initialValues?: NoticeFormValues;
+  onSubmit: (values: NoticeFormValues) => void;
+  /** 수정 화면에서만 — 있으면 삭제 버튼을 보여준다 */
   onDelete?: () => void;
 }
 
-// Figma: 모임/11 공지 작성(nodeId 142:19296), 모임/12 공지 수정(nodeId 142:19369) — 제목/타이틀
-// 텍스트, 삭제 링크 유무만 다르고 레이아웃은 동일해서 폼 하나로 공유한다.
+// Figma: 모임/11 공지 작성(nodeId 142:19296) · 모임/12 공지 수정(nodeId 142:19369) — 문구와 삭제 유무만
+// 다르고 서버 요청도 같은 {title, body, isPinned}라 폼 하나를 함께 쓴다. Figma의 "상단에 고정하기"
+// 체크박스는 켜고 끄는 설정이라 WDS Switch로 바꿨다.
 function CrewNoticeForm({
-  heading,
   description,
-  defaultTitle,
-  defaultContent,
-  submitLabel,
-  onSubmit,
+  heading,
+  initialValues,
   onDelete,
+  onSubmit,
+  submitLabel,
 }: CrewNoticeFormProps) {
-  const [pinned, setPinned] = useState(false);
+  const [title, setTitle] = useState(initialValues?.title ?? "");
+  const [body, setBody] = useState(initialValues?.body ?? "");
+  const [isPinned, setIsPinned] = useState(initialValues?.isPinned ?? false);
+  const pinnedId = useId();
+
+  const canSubmit = title.trim() !== "" && body.trim() !== "";
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-5">
-        <div className="flex flex-col gap-2">
+      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-6">
+        <div className="flex flex-col gap-1">
           <Typography
             color="semantic.label.strong"
             variant="title3"
@@ -50,78 +58,67 @@ function CrewNoticeForm({
           </Typography>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Typography
-            color="semantic.label.normal"
-            variant="label1"
-            weight="bold"
-          >
-            제목
-          </Typography>
-          <TextField
-            defaultValue={defaultTitle}
-            id="notice-title"
-            width="100%"
-          />
-        </div>
+        <TextInputField
+          label="제목"
+          maxLength={100}
+          onChange={setTitle}
+          placeholder="공지 제목을 입력해 주세요"
+          value={title}
+        />
+        <TextInputField
+          label="내용"
+          multiline
+          onChange={setBody}
+          placeholder="공지 내용을 입력해 주세요"
+          value={body}
+        />
 
-        <div className="flex flex-col gap-2">
-          <Typography
-            color="semantic.label.normal"
-            variant="label1"
-            weight="bold"
-          >
-            내용
-          </Typography>
-          <TextArea
-            defaultValue={defaultContent}
-            id="notice-content"
-            minRows={4}
-            placeholder="공지 내용을 입력해 주세요"
-            width="100%"
+        {/* 글자를 눌러도 Switch가 켜지고 꺼지도록 label로 잇는다. */}
+        <label
+          className="flex items-center justify-between gap-3"
+          htmlFor={pinnedId}
+        >
+          <span className="flex flex-col gap-0.5">
+            <Typography
+              as="span"
+              color="semantic.label.normal"
+              variant="body1"
+              weight="medium"
+            >
+              상단에 고정
+            </Typography>
+            <Typography
+              as="span"
+              color="semantic.label.alternative"
+              variant="label2"
+              weight="regular"
+            >
+              고정한 공지는 모임 홈 공지 맨 위에 보여요
+            </Typography>
+          </span>
+          <Switch
+            checked={isPinned}
+            id={pinnedId}
+            onCheckedChange={setIsPinned}
           />
-        </div>
-
-        <label className="flex items-center gap-2.5" htmlFor="notice-pinned">
-          <Checkbox
-            checked={pinned}
-            id="notice-pinned"
-            onCheckedChange={setPinned}
-            size="small"
-          />
-          <Typography
-            color="semantic.label.normal"
-            variant="body2"
-            weight="regular"
-          >
-            상단에 고정하기
-          </Typography>
         </label>
 
         {onDelete && (
-          <button className="self-start" onClick={onDelete} type="button">
-            <Typography
-              color="semantic.label.assistive"
-              variant="label1"
-              weight="bold"
-            >
+          <div className="flex">
+            <TextButton color="assistive" onClick={onDelete} size="small">
               이 공지 삭제하기
-            </Typography>
-          </button>
+            </TextButton>
+          </div>
         )}
       </div>
-      <div className="flex shrink-0 flex-col bg-surface-elevated px-5 pt-3 pb-[34px]">
-        <Button
-          className="shadow-neon-sm"
-          color="primary"
-          fullWidth
-          onClick={onSubmit}
-          size="large"
-          variant="solid"
-        >
-          {submitLabel}
-        </Button>
-      </div>
+
+      <BottomActionArea
+        disabled={!canSubmit}
+        label={submitLabel}
+        onClick={() =>
+          onSubmit({ body: body.trim(), isPinned, title: title.trim() })
+        }
+      />
     </div>
   );
 }

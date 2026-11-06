@@ -1,122 +1,152 @@
-import { ContentBadge, TextButton, Typography } from "@wanteddev/wds";
-import { useNavigate, useParams } from "react-router-dom";
+import { Button, List, Typography } from "@wanteddev/wds";
+import { IconCalendar, IconLocation } from "@wanteddev/wds-icon";
+import { useNavigate } from "react-router-dom";
 
+import Badge from "@/components/ui/Badge";
+import EmptyState from "@/components/ui/EmptyState";
+import MetaItem from "@/components/ui/MetaItem";
+import PressableCard from "@/components/ui/PressableCard";
+import SectionHeader from "@/components/ui/SectionHeader";
+import ConfirmedSetlist from "@/features/team/components/ConfirmedSetlist";
+import SongCell from "@/features/team/components/SongCell";
+import TeamFallback from "@/features/team/components/TeamFallback";
 import TeamHeroTabs from "@/features/team/components/TeamHeroTabs";
+import {
+  getTeamPerformance,
+  isTeamLeader,
+  isTeamMember,
+  useTeamParam,
+} from "@/features/team/components/teamHelpers";
+import { formatDateTime, formatDday } from "@/lib/domain/format";
+import { PERFORMANCE_STATUS_LABEL } from "@/lib/domain/labels";
+import type { Performance, Team } from "@/lib/domain/types";
+import { getGroup, getSong, isUpcoming } from "@/mocks/selectors";
 
-// Figma: 팀/03 팀 공연 (nodeId 101:21978). 독립 팀(공연에 연결되지 않은 팀)이라 안내 카드만
-// 보여준다 — 공연에 참가 중인 팀은 공연 정보 카드로 대체될 자리(아직 데이터 없음, TODO).
-
-interface SetlistSong {
-  order: string;
-  title: string;
-  artist: string;
-  selected?: boolean;
+// Figma: 팀/03 팀 공연 (nodeId 101:21978) — 공연 팀만. 이 팀이 나가는 공연 정보와 공연 셋리스트.
+// 셋리스트는 모임장이 확정하기 전에는 "우리 팀이 넘긴 곡"만, 확정 뒤에는 공연 전체 순서를 보여준다
+// (서버: 팀 페이지는 확정곡을 공연 셋리스트에서 조회).
+function TeamShowScreen() {
+  const team = useTeamParam();
+  if (!team) return <TeamFallback kind="notFound" />;
+  if (!isTeamMember(team))
+    return <TeamFallback kind="memberOnly" team={team} />;
+  const performance = getTeamPerformance(team);
+  if (!performance) return <TeamFallback kind="noPerformance" team={team} />;
+  return <TeamShowContent performance={performance} team={team} />;
 }
 
-const SETLIST: SetlistSong[] = [
-  { artist: "Radiohead", order: "01", selected: true, title: "High and Dry" },
-  { artist: "검정치마", order: "02", title: "Antifreeze" },
-  { artist: "혁오", order: "03", title: "TOMBOY" },
-];
-
-function TeamShowScreen() {
+function TeamShowContent({
+  performance,
+  team,
+}: {
+  performance: Performance;
+  team: Team;
+}) {
   const navigate = useNavigate();
-  const { teamId = "" } = useParams();
+  const group = getGroup(performance.groupId);
+  const upcoming = isUpcoming(performance);
+
+  const submitted = performance.setlist.filter(
+    (item) => item.teamId === team.id,
+  );
 
   return (
     <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
-      <TeamHeroTabs active="show" teamId={teamId} />
+      <TeamHeroTabs active="show" team={team} />
 
-      <div className="flex flex-col gap-4 px-5 pt-6 pb-8">
-        <div className="flex flex-col gap-1 rounded-2xl bg-surface p-5">
-          <ContentBadge
-            accentColor="semantic.primary.normal"
-            color="accent"
-            size="small"
-          >
-            자체 합주팀
-          </ContentBadge>
+      <div className="flex flex-col gap-6 px-5 pt-6 pb-8">
+        <PressableCard onClick={() => navigate(`/show/${performance.id}`)}>
+          <div className="flex items-center gap-1.5">
+            <Badge tone={upcoming ? "accent" : "outline"}>
+              {PERFORMANCE_STATUS_LABEL[performance.status]}
+            </Badge>
+            {upcoming && (
+              <Badge glow tone="solid">
+                {formatDday(performance.performedAt)}
+              </Badge>
+            )}
+          </div>
           <Typography
-            color="semantic.label.alternative"
-            variant="label2"
-            weight="medium"
-          >
-            연결된 공연 없이 자유롭게 합주하고 있어요. 공연 참가가 확정되면
-            이곳에 공연 정보가 표시돼요.
-          </Typography>
-        </div>
-
-        <div className="flex flex-col gap-1 pt-2">
-          <Typography
-            color="semantic.label.normal"
-            variant="headline1"
+            color="semantic.label.strong"
+            variant="headline2"
             weight="bold"
           >
-            공연 셋리스트
+            {performance.title}
           </Typography>
+          {group && (
+            <Typography
+              color="semantic.label.alternative"
+              variant="label2"
+              weight="medium"
+            >
+              {group.name}
+            </Typography>
+          )}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <MetaItem icon={<IconCalendar />}>
+              {formatDateTime(performance.performedAt)}
+            </MetaItem>
+            <MetaItem icon={<IconLocation />}>{performance.venue}</MetaItem>
+          </div>
+        </PressableCard>
+
+        <section className="flex flex-col gap-1">
+          <SectionHeader
+            count={
+              performance.setlistConfirmed
+                ? performance.setlist.length
+                : submitted.length
+            }
+            title="공연 셋리스트"
+          />
           <Typography
             color="semantic.label.alternative"
             variant="label2"
             weight="medium"
           >
-            현재 확정된 연주곡과 팀원의 추천곡이에요.
+            {performance.setlistConfirmed
+              ? "모임장이 확정한 공연 순서예요."
+              : "모임장이 아직 셋리스트를 확정하지 않았어요. 우리 팀이 넘긴 곡이에요."}
           </Typography>
-          {SETLIST.map((song) => (
-            <div className="flex items-center gap-3.5 py-3" key={song.order}>
-              <Typography
-                color="semantic.label.disable"
-                variant="headline2"
-                weight="bold"
-              >
-                {song.order}
-              </Typography>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <Typography
-                  color="semantic.label.normal"
-                  variant="body1"
-                  weight="bold"
-                >
-                  {song.title}
-                </Typography>
-                <Typography
-                  color="semantic.label.assistive"
-                  variant="label2"
-                  weight="medium"
-                >
-                  {song.artist}
-                </Typography>
-              </div>
-              {song.selected && (
-                <ContentBadge
-                  accentColor="semantic.primary.normal"
-                  className="shadow-neon-sm"
-                  color="accent"
-                  size="small"
-                >
-                  선정
-                </ContentBadge>
-              )}
-            </div>
-          ))}
-        </div>
 
-        <div className="flex items-center gap-2 rounded-xl bg-surface p-4">
-          <Typography
-            className="flex-1"
-            color="semantic.label.normal"
-            variant="body1"
-            weight="medium"
+          {performance.setlistConfirmed ? (
+            <ConfirmedSetlist performance={performance} teamId={team.id} />
+          ) : submitted.length === 0 ? (
+            <EmptyState
+              description={
+                isTeamLeader(team)
+                  ? "선택곡 중에서 공연에 올릴 곡을 넘겨 주세요."
+                  : "팀장이 선택곡 중에서 공연에 올릴 곡을 넘기면 여기에 보여요."
+              }
+              title="아직 넘긴 곡이 없어요"
+            />
+          ) : (
+            <List>
+              {submitted.map((item, index) => {
+                const song = getSong(item.songId);
+                if (!song) return null;
+                return (
+                  <SongCell key={item.songId} order={index + 1} song={song} />
+                );
+              })}
+            </List>
+          )}
+        </section>
+
+        {/* 확정된 뒤에는 넘길 수 없다(모임장이 확정을 풀어야 다시 가능) — 팀장에게만, 확정 전에만 보인다 */}
+        {isTeamLeader(team) && !performance.setlistConfirmed && upcoming && (
+          <Button
+            color="assistive"
+            fullWidth
+            onClick={() =>
+              navigate(`/team/${team.id}/songs`, { replace: true })
+            }
+            size="large"
+            variant="outlined"
           >
-            이 곡은 어때요?
-          </Typography>
-          <TextButton
-            color="primary"
-            size="small" // 추천곡 목록은 셋리스트 추가 화면이 들고 있다.
-            onClick={() => navigate(`/team/${teamId}/setlist/add`)}
-          >
-            추천곡 보기
-          </TextButton>
-        </div>
+            셋리스트로 넘길 곡 고르기
+          </Button>
+        )}
       </div>
     </div>
   );

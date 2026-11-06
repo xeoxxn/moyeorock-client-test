@@ -1,47 +1,46 @@
-import { Button, Typography } from "@wanteddev/wds";
-import { IconClose } from "@wanteddev/wds-icon";
+import { Typography } from "@wanteddev/wds";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// Figma: 팀/08 팀 만들기 - 유형 선택 (nodeId 101:23524)
+import BottomActionArea from "@/components/ui/BottomActionArea";
+import ScreenHeader from "@/components/ui/ScreenHeader";
+import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import SelectableCard from "@/features/team/components/SelectableCard";
+import { TEAM_KIND_LABEL } from "@/lib/domain/labels";
 
-type TeamType = "show" | "independent";
+type TeamKind = keyof typeof TEAM_KIND_LABEL;
 
-interface TeamTypeOption {
-  value: TeamType;
-  title: string;
-  description: string;
-}
-
-const OPTIONS: TeamTypeOption[] = [
+const OPTIONS: { value: TeamKind; description: string; path: string }[] = [
   {
-    description: "모임 공연에 참가할 팀을 만들어요.",
-    title: "공연 참가 팀",
-    value: "show",
+    description:
+      "모임 없이 꾸리는 밴드예요. 만들자마자 선택곡·합주 일정을 함께 관리해요.",
+    path: "/team/create/independent",
+    value: "independent",
   },
   {
-    description: "모임에 소속되지 않고 자유롭게 합주해요.",
-    title: "독립 팀",
-    value: "independent",
+    description:
+      "내가 속한 모임의 공연에 나가는 팀이에요. 다음 단계에서 참가할 공연을 골라요.",
+    path: "/team/create/show",
+    value: "performance",
   },
 ];
 
+// Figma: 팀/08 팀 만들기 - 유형 선택 (nodeId 101:23524). 서버의 팀 종류 두 가지(독립 팀 / 공연 팀)를
+// 고른다. 공연 팀은 공연에 속해야 해서(POST /performances/{id}/teams) 공연 선택 단계를 거친다.
 function TeamNewTypeScreen() {
   const navigate = useNavigate();
-  const [type, setType] = useState<TeamType>("show");
+  const [kind, setKind] = useState<TeamKind>("independent");
+
+  useScreenHeader(<ScreenHeader title="팀 만들기" />);
+
+  const selected = OPTIONS.find((option) => option.value === kind);
 
   return (
-    <div className="flex h-full w-full flex-col bg-background">
-      <div className="flex h-14 items-center px-5">
-        <button onClick={() => navigate(-1)} type="button">
-          <IconClose className="size-6 text-label-strong" />
-        </button>
-      </div>
-
-      <div className="flex flex-1 flex-col gap-6 px-5 pt-2 pb-5">
+    <>
+      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-8">
         <div className="flex flex-col gap-2">
           <Typography
-            color="semantic.label.normal"
+            color="semantic.label.strong"
             variant="title3"
             weight="bold"
           >
@@ -52,64 +51,43 @@ function TeamNewTypeScreen() {
             variant="body2"
             weight="regular"
           >
-            팀 유형은 나중에 바꿀 수 없어요
+            팀 종류는 나중에 바꿀 수 없어요
           </Typography>
         </div>
 
         <div className="flex flex-col gap-3">
-          {OPTIONS.map((option) => {
-            const isSelected = type === option.value;
-            return (
-              <button
-                className={
-                  isSelected
-                    ? "rounded-2xl border-[1.5px] border-accent bg-accent-subtle p-5 text-left"
-                    : "rounded-2xl border border-line-neutral bg-surface p-5 text-left"
-                }
-                key={option.value}
-                onClick={() => setType(option.value)}
-                type="button"
+          {OPTIONS.map((option) => (
+            <SelectableCard
+              key={option.value}
+              onSelect={() => setKind(option.value)}
+              selected={kind === option.value}
+            >
+              <Typography
+                color="semantic.label.strong"
+                variant="headline2"
+                weight="bold"
               >
-                <div className="flex items-center gap-2">
-                  <Typography
-                    color="semantic.label.normal"
-                    variant="headline2"
-                    weight="bold"
-                  >
-                    {option.title}
-                  </Typography>
-                  <Typography
-                    color="semantic.label.alternative"
-                    variant="label2"
-                    weight="medium"
-                  >
-                    {option.description}
-                  </Typography>
-                </div>
-              </button>
-            );
-          })}
+                {TEAM_KIND_LABEL[option.value]}
+              </Typography>
+              <Typography
+                color="semantic.label.alternative"
+                variant="label2"
+                weight="medium"
+              >
+                {option.description}
+              </Typography>
+            </SelectableCard>
+          ))}
         </div>
       </div>
 
-      <div className="flex flex-col bg-surface-elevated px-5 pt-3 pb-[34px]">
-        <Button
-          color="primary"
-          fullWidth
-          onClick={() =>
-            navigate(
-              type === "independent"
-                ? "/team/create/independent"
-                : "/team/create/show",
-            )
-          }
-          size="large"
-          variant="solid"
-        >
-          다음
-        </Button>
-      </div>
-    </div>
+      <BottomActionArea
+        label="다음"
+        onClick={() => {
+          if (selected) navigate(selected.path);
+        }}
+      />
+    </>
   );
 }
 

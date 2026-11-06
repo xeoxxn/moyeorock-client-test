@@ -1,4 +1,4 @@
-import { Typography } from "@wanteddev/wds";
+import { BottomNavigation, BottomNavigationItem } from "@wanteddev/wds";
 import {
   IconCalendar,
   IconDocument,
@@ -14,67 +14,56 @@ interface BottomNavProps {
   onValueChange: (value: BottomNavValue) => void;
 }
 
-interface BottomNavTab {
-  value: BottomNavValue;
-  label: string;
-  Icon: typeof IconHome;
-}
+// Figma: Bottom Nav(홈 대시보드 nodeId 101:11659) — WDS `BottomNavigation`을 쓴다.
+//
+// WDS 기본 동작 두 가지만 sx로 덮는다.
+// 1. `data-scroll-end`: body 스크롤이 끝나면 배경을 투명하게 바꾸는데, 이 앱은 body가 아니라
+//    화면 안쪽이 스크롤돼서 항상 "끝"으로 판정된다 → 배경·테두리를 그대로 유지시킨다.
+// 2. 선택 탭 색: WDS 기본은 primary(레드)지만 디자인은 흰색(label.strong)이다 — 레드는 강조에만 쓴다.
+const TABS: { value: BottomNavValue; label: string; Icon: typeof IconHome }[] =
+  [
+    { Icon: IconHome, label: "홈", value: "home" },
+    { Icon: IconCalendar, label: "일정", value: "schedule" },
+    { Icon: IconPersons, label: "모임", value: "crew" },
+    { Icon: IconDocument, label: "게시판", value: "board" },
+    { Icon: IconPerson, label: "마이", value: "mine" },
+  ];
 
-// Figma: Bottom Nav(홈 대시보드 nodeId 101:11659) — 선택 상태도 별도 Fill 아이콘이 아니라 같은
-// 아이콘의 색(흰색 ↔ 회색)만 바뀐다. WDS `BottomNavigation`은 iOS 반투명 배경 + body 스크롤
-// 기준 투명 전환 로직이 내장돼 있어(우리 레이아웃은 내부 스크롤이라 항상 오판) 쓰지 않고,
-// Stream stream-client-web과 같은 이유로 로컬 컴포넌트로 새로 만들었다.
-const TABS: BottomNavTab[] = [
-  { Icon: IconHome, label: "홈", value: "home" },
-  { Icon: IconCalendar, label: "일정", value: "schedule" },
-  { Icon: IconPersons, label: "모임", value: "crew" },
-  { Icon: IconDocument, label: "게시판", value: "board" },
-  { Icon: IconPerson, label: "마이", value: "mine" },
-];
-
-// 화면 전환 애니메이션의 방향(오른쪽 탭으로 가면 forward)을 ScreenLayout이 이 순서로 계산한다.
-// 탭 순서를 두 곳에 적어두면 어긋나므로 TABS에서 파생시킨다.
+// 화면 전환 방향(오른쪽 탭으로 가면 forward)을 ScreenLayout이 이 순서로 계산한다.
 export const BOTTOM_NAV_ORDER: BottomNavValue[] = TABS.map((tab) => tab.value);
+
+const navSurface = {
+  backgroundColor: "var(--semantic-background-elevated-normal)",
+  borderColor: "var(--semantic-line-normal-neutral)",
+};
 
 function BottomNav({ value, onValueChange }: BottomNavProps) {
   return (
-    <div className="flex w-full flex-col items-center border-line-neutral border-t bg-surface-elevated px-3 pt-2">
-      <div className="flex h-[52px] w-full items-center justify-center">
-        {TABS.map(({ value: tabValue, label, Icon }) => {
-          const isSelected = tabValue === value;
-          return (
-            <button
-              className="flex flex-1 flex-col items-center justify-center gap-1"
-              key={tabValue}
-              onClick={() => onValueChange(tabValue)}
-              type="button"
-            >
-              <Icon
-                className={
-                  isSelected
-                    ? "size-6 text-label-strong"
-                    : "size-6 text-label-assistive"
-                }
-              />
-              <Typography
-                color={
-                  isSelected
-                    ? "semantic.label.strong"
-                    : "semantic.label.assistive"
-                }
-                variant="caption2"
-                weight={isSelected ? "bold" : "regular"}
-              >
-                {label}
-              </Typography>
-            </button>
-          );
-        })}
-      </div>
-      {/* iOS 홈 인디케이터 자리. 앱 WebView에서는 네이티브 세이프에어리어가 이미 확보해 줘서
-          여기서 또 주면 여백이 두 번 들어간다. 홈 인디케이터가 없는 데스크톱 컬럼에서만
-          Figma 스펙대로(812 프레임 기준 34px) 남긴다. */}
-      <div className="h-safe-bottom w-full sm:h-[34px]" />
+    <div className="w-full bg-surface-elevated pb-safe-bottom">
+      <BottomNavigation
+        onValueChange={(next) => onValueChange(next as BottomNavValue)}
+        sx={{
+          ...navSurface,
+          backdropFilter: "none",
+          '&[data-scroll-end="true"]': navSurface,
+        }}
+        value={value}
+      >
+        {TABS.map(({ value: tabValue, label, Icon }) => (
+          <BottomNavigationItem
+            icon={<Icon />}
+            key={tabValue}
+            label={label}
+            sx={{
+              color: "var(--semantic-label-assistive)",
+              '&[aria-current="page"]': {
+                color: "var(--semantic-label-strong)",
+              },
+            }}
+            value={tabValue}
+          />
+        ))}
+      </BottomNavigation>
     </div>
   );
 }

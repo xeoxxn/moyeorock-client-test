@@ -1,88 +1,159 @@
-import { Button, Tab, TabList, TabListItem, Typography } from "@wanteddev/wds";
 import {
-  IconMusicMicrophone,
-  IconPersons,
-  IconPlus,
-} from "@wanteddev/wds-icon";
-import { useNavigate } from "react-router-dom";
+  Button,
+  Tab,
+  TabList,
+  TabListItem,
+  TextButton,
+  TopNavigationButton,
+  Typography,
+} from "@wanteddev/wds";
+import { IconLocation, IconPersons, IconPlus } from "@wanteddev/wds-icon";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import Badge from "@/components/ui/Badge";
+import EmptyState from "@/components/ui/EmptyState";
+import MetaItem from "@/components/ui/MetaItem";
+import PressableCard from "@/components/ui/PressableCard";
+import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import TeamListPanel from "@/features/team/TeamListPanel";
+import { GROUP_TYPE_LABEL, REGION_LABEL } from "@/lib/domain/labels";
+import type { GroupRole } from "@/lib/domain/types";
+import { getMyGroups } from "@/mocks/selectors";
 
-// Figma: 모임/01 모임 목록 (nodeId 101:18601), Bottom Nav "모임" 탭의 루트라 hasBottomNav를 그대로 둔다.
-// 상단 "모임 | 팀" Tab은 이 화면 안의 콘텐츠 전환이 아니라 최상위 섹션 전환이다 — "팀" 목록은
-// 별도 화면(팀 담당 에이전트가 구현 중인 /team)이라 선택 시 그쪽으로 이동만 시킨다.
+// Figma: 모임/01 모임 목록 (101:18601) · 팀/01 팀 목록 (101:21220) — Bottom Nav "모임" 탭 루트.
+// 두 Figma 화면은 같은 헤더 아래 "모임 | 팀" 탭만 다른 한 화면이다. 예전에는 /crew와 /team이
+// 헤더·탭을 각자 그려서 탭을 누르면 화면 전체가 갈아끼워졌다(탭 크기도 서로 달랐다). 이제는 한
+// 화면 안에서 패널만 바꾸고, 선택한 탭은 ?tab=으로 남겨 뒤로 와도 그대로 열린다.
+type CrewTab = "crew" | "team";
 
-interface CrewSummary {
-  id: string;
-  name: string;
-  role?: "운영진" | "멤버";
-  description: string;
-  recruitPeriod?: string;
-  genre: string;
-  memberCount: number;
+function RoleBadge({ role }: { role: GroupRole }) {
+  if (role === "OWNER") return <Badge glow>모임장</Badge>;
+  if (role === "MANAGER") return <Badge>운영진</Badge>;
+  return <Badge tone="outline">멤버</Badge>;
 }
 
-const MY_CREWS: CrewSummary[] = [
-  {
-    description: "좋아하는 음악으로 함께 무대를 만드는 모임",
-    genre: "인디",
-    id: "project-crew",
-    memberCount: 11,
-    name: "프로젝트 모임",
-    recruitPeriod: "모집 2026.09.28까지 · 활동 10.03 ~ 11.15",
-    role: "운영진",
-  },
-  {
-    description: "매주 새로운 합주를 즐기는 자유 세션",
-    genre: "록",
-    id: "weekend-jam",
-    memberCount: 3,
-    name: "주말 잼 세션",
-    role: "멤버",
-  },
-  {
-    description: "작은 공연을 준비하는 어쿠스틱 모임",
-    genre: "어쿠스틱",
-    id: "acoustic-night",
-    memberCount: 3,
-    name: "어쿠스틱 나이트",
-  },
-];
+function CrewListPanel() {
+  const navigate = useNavigate();
+  const groups = getMyGroups();
+
+  return (
+    <div className="flex flex-col gap-4 px-5 pt-5 pb-8">
+      <Typography
+        color="semantic.label.alternative"
+        variant="body2"
+        weight="regular"
+      >
+        모임은 공연을 운영하고, 팀은 함께 연주해요.
+        <br />
+        먼저 활동할 모임을 선택하세요.
+      </Typography>
+      <div className="flex items-center justify-between">
+        <Typography
+          color="semantic.label.alternative"
+          variant="label2"
+          weight="bold"
+        >
+          내 모임 {groups.length}개
+        </Typography>
+        {/* 서버에 전체 모임 검색이 없다 — 모임은 공고·초대로만 들어간다(2026-10-29 결정). */}
+        <TextButton
+          color="primary"
+          onClick={() => navigate("/board?type=group")}
+          size="small"
+        >
+          모임 찾기
+        </TextButton>
+      </div>
+
+      {groups.length === 0 ? (
+        <EmptyState
+          action={{
+            label: "모임 모집 공고 보기",
+            onClick: () => navigate("/board?type=group"),
+          }}
+          description="공고에 지원하거나 초대를 받으면 여기에 모임이 보여요."
+          title="아직 함께하는 모임이 없어요"
+        />
+      ) : (
+        groups.map((group) => (
+          <PressableCard
+            key={group.id}
+            onClick={() => navigate(`/crew/${group.id}`)}
+          >
+            <div className="flex items-center gap-1.5">
+              <Typography
+                color="semantic.label.strong"
+                variant="body1"
+                weight="bold"
+              >
+                {group.name}
+              </Typography>
+              {group.myRole && <RoleBadge role={group.myRole} />}
+            </div>
+            <Typography
+              color="semantic.label.alternative"
+              variant="label2"
+              weight="medium"
+            >
+              {group.description}
+            </Typography>
+            <div className="flex items-center gap-2.5">
+              <MetaItem icon={<IconLocation />}>
+                {REGION_LABEL[group.region]} · {GROUP_TYPE_LABEL[group.type]}
+              </MetaItem>
+              <MetaItem icon={<IconPersons />}>{group.memberCount}명</MetaItem>
+            </div>
+          </PressableCard>
+        ))
+      )}
+
+      <Button
+        color="assistive"
+        fullWidth
+        onClick={() => navigate("/crew/create/step1")}
+        size="large"
+        variant="outlined"
+      >
+        모임 만들기
+      </Button>
+    </div>
+  );
+}
 
 function CrewListScreen() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: CrewTab = searchParams.get("tab") === "team" ? "team" : "crew";
 
   useScreenHeader(
-    <div className="flex w-full items-center gap-3 px-5 py-2.5">
-      <Typography
-        as="h1"
-        className="flex-1"
-        color="semantic.label.normal"
-        variant="title3"
-        weight="bold"
-      >
-        모임
-      </Typography>
-      <button
-        aria-label="모임 만들기"
-        onClick={() => navigate("/crew/create/step1")}
-        type="button"
-      >
-        <IconPlus className="size-6 text-label-normal" />
-      </button>
-    </div>,
+    <ScreenHeader
+      title="모임"
+      trailing={
+        <TopNavigationButton
+          aria-label={tab === "team" ? "팀 만들기" : "모임 만들기"}
+          onClick={() =>
+            navigate(
+              tab === "team" ? "/team/create/type" : "/crew/create/step1",
+            )
+          }
+        >
+          <IconPlus />
+        </TopNavigationButton>
+      }
+      variant="title"
+    />,
   );
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <Tab
-        onValueChange={(value) => {
-          if (value === "team") {
-            navigate("/team");
-          }
-        }}
-        value="crew"
+        onValueChange={(value) =>
+          setSearchParams(value === "team" ? { tab: "team" } : {}, {
+            replace: true,
+          })
+        }
+        value={tab}
       >
         <TabList resize="fill" size="medium">
           <TabListItem value="crew">모임</TabListItem>
@@ -90,104 +161,7 @@ function CrewListScreen() {
         </TabList>
       </Tab>
       <div className="scrollbar-hidden flex-1 overflow-y-auto">
-        <div className="flex flex-col gap-4 px-5 pt-5 pb-6">
-          <Typography
-            color="semantic.label.alternative"
-            variant="body2"
-            weight="regular"
-          >
-            모임은 공연을 운영하고, 팀은 함께 연주해요.
-            <br />
-            먼저 활동할 모임을 선택하세요.
-          </Typography>
-          <div className="flex items-center justify-between">
-            <Typography
-              color="semantic.label.alternative"
-              variant="label2"
-              weight="bold"
-            >
-              내 모임 {MY_CREWS.length}개
-            </Typography>
-            <button onClick={() => navigate("/crew/find")} type="button">
-              <Typography
-                color="semantic.primary.normal"
-                variant="label2"
-                weight="bold"
-              >
-                모임 찾기
-              </Typography>
-            </button>
-          </div>
-          {MY_CREWS.map((crew) => (
-            <button
-              className="flex flex-col gap-1 rounded-2xl border border-line-solid bg-surface p-4 text-left"
-              key={crew.id}
-              onClick={() => navigate(`/crew/${crew.id}`)}
-              type="button"
-            >
-              <div className="flex items-center gap-1.5">
-                <Typography
-                  color="semantic.label.normal"
-                  variant="body1"
-                  weight="bold"
-                >
-                  {crew.name}
-                </Typography>
-                {crew.role === "운영진" && <Badge glow>운영진</Badge>}
-                {crew.role === "멤버" && <Badge tone="outline">멤버</Badge>}
-              </div>
-              <Typography
-                color="semantic.label.alternative"
-                variant="label2"
-                weight="medium"
-              >
-                {crew.description}
-              </Typography>
-              {crew.recruitPeriod && (
-                <Typography
-                  className="text-glow-sm"
-                  color="semantic.primary.normal"
-                  variant="caption1"
-                  weight="bold"
-                >
-                  {crew.recruitPeriod}
-                </Typography>
-              )}
-              <div className="flex items-center gap-2.5 pt-0.5">
-                <div className="flex items-center gap-1">
-                  <IconMusicMicrophone className="size-3.5 text-label-alternative" />
-                  <Typography
-                    color="semantic.label.alternative"
-                    variant="label2"
-                    weight="medium"
-                  >
-                    {crew.genre}
-                  </Typography>
-                </div>
-                <div className="flex items-center gap-1">
-                  <IconPersons className="size-3.5 text-label-alternative" />
-                  <Typography
-                    color="semantic.label.alternative"
-                    variant="label2"
-                    weight="medium"
-                  >
-                    {crew.memberCount}명
-                  </Typography>
-                </div>
-              </div>
-            </button>
-          ))}
-          <Button
-            color="assistive"
-            fullWidth
-            onClick={() => navigate("/crew/create/step1")}
-            size="large"
-            sx={{ backgroundColor: "var(--color-surface)" }}
-            variant="outlined"
-          >
-            모임 만들기
-          </Button>
-        </div>
+        {tab === "team" ? <TeamListPanel /> : <CrewListPanel />}
       </div>
     </div>
   );

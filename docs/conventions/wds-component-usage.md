@@ -13,8 +13,36 @@
 1. **Figma의 "화면" ≠ 라우트 1개.** "버튼 눌림", "일정 없는 날" 같은 상태 변형(state variant)은 같은 화면 컴포넌트의 조건부 렌더링/인터랙션 상태로 흡수한다. 새 라우트를 만들지 않는다. (예: "온보딩/01-1 로그인 (버튼 눌림)"은 "01 로그인"의 버튼 active 스타일일 뿐 별도 화면이 아니다.)
 2. **"Status Bar" 프레임(9:41, 신호/배터리 아이콘)은 구현하지 않는다.** Figma가 폰 프레임을 흉내 내려고 넣은 목업 장식이다. 실제 상단 안전영역은 `ScreenLayout`의 `pt-safe-top`이 담당한다.
 3. **색·폰트 크기를 화면 컴포넌트 안에 하드코딩하지 않는다.** 항상 `src/index.css`의 Tailwind 토큰(`bg-background`, `text-label-strong`, `border-line-neutral`, `shadow-neon-md` 등) 또는 WDS `Typography`/색 토큰 문자열(`"semantic.primary.normal"` 등)을 통해서만 쓴다. Figma 실측 hex가 기존 토큰과 정확히 안 맞으면(예: 카카오 옐로 `#fee500`) `src/index.css`의 `@theme` 블록에 새 토큰을 추가하고 그걸 참조한다 — 화면 파일에 `#`으로 시작하는 색을 직접 쓰지 않는다.
-4. **WDS 컴포넌트가 있으면 무조건 WDS를 쓴다.** `search_design_system`으로 먼저 확인하고, 이름이 같아도 스타일이 명확히 다르면(패딩·배경 처리 방식 등) `get_design_context`로 실제 노드를 열어 재확인한다 — 이름만 보고 단정하지 않는다.
+4. **WDS를 무조건 쓴다(2026-11 개편).** Figma 마크업 모양이 WDS와 조금 달라도 WDS 컴포넌트로 옮기고, 색·여백만 토큰/`sx`로 맞춘다. 예전처럼 "스타일이 달라서 로컬로 새로 만든다"는 판단을 하지 않는다. 대응표:
+
+   | 용도 | 쓸 것 |
+   |---|---|
+   | 상단 바 | `ScreenHeader`(= WDS `TopNavigation`) + trailing은 `TopNavigationButton` |
+   | 하단 탭 | `BottomNav`(= WDS `BottomNavigation`, sx로 배경 유지·선택색 흰색) |
+   | 하단 고정 버튼 | `BottomActionArea`(= WDS `ActionArea`) |
+   | 입력 | `TextInputField`(= WDS `FormField`+`TextField`/`TextArea`), 선택은 `SelectField`(= WDS `Select`) |
+   | 상태 라벨 / 값 태그 | `Badge` / `Tag`(= WDS `ContentBadge`) |
+   | 고르는 칩 · 필터 줄 · 탭 | WDS `Chip` · `Category` · `Tab` |
+   | 섹션 제목 | `SectionHeader`(= WDS `SectionHeader` + `TextButton`) |
+   | 목록 행 · 아바타 | WDS `List`/`ListCell` · `Avatar` |
+   | 카드 | `PressableCard`(표면 카드 + WDS `WithInteraction`) |
+   | 시트 · 확인창 · 토스트 | `BottomSheet`(= WDS `Modal` bottom) · `useAlert()` · `useToast()` |
+   | 진행 · 페이지 점 · 빈 상태 | `StepProgress`(= `ProgressIndicator`) · `PaginationDots` · `EmptyState`(= `FallbackView`) |
+   | 토글 · 동의 · 북마크 | `Switch` · `Checkbox` · `ToggleIcon` |
+   | 날짜·시간 | `DatePicker`/`TimePicker`/`DateCalendar` |
+
+   맨 `<input>`/`<textarea>`/`<select>`는 쓰지 않고, 누를 수 있는 요소를 새로 만들 때는 WDS 버튼류나 `WithInteraction`으로 감싼다.
 5. **에셋은 실제로 다운로드해서 `src/assets/`에 저장한다.** Figma의 임시 자산 URL(`https://www.figma.com/api/mcp/asset/...`)은 7일 뒤 만료되므로 코드에 직접 남기지 않는다. 마스코트는 `src/assets/mascot/`, 장식용 네온 글로우는 `src/assets/decorative/`에 모은다. 아이콘은 거의 전부 `@wanteddev/wds-icon`에 대응 컴포넌트가 있으니(아래 표) raw SVG를 받지 말고 그 컴포넌트를 쓴다.
+6. **고정 픽셀 임의값을 쓰지 않는다.** `h-[52px]`·`size-[72px]`·`rounded-[20px]`·`pb-[34px]`·`text-[16px]` 대신 Tailwind 스케일(`h-13`·`size-18`·`rounded-2xl`)을 쓰고, 하단 여백은 `BottomActionArea`/`pb-safe-bottom`이 맡는다. 마스코트·장식 이미지는 고정 크기 대신 컨테이너 기준(`w-1/2 max-w-56 aspect-square`)으로 반응형으로 둔다. WDS `sx`에 길이가 꼭 필요하면 rem으로 쓴다.
+7. **화면 데이터는 `@/mocks/selectors`에서 라우트 파라미터로 찾는다.** 화면 안에 이름·숫자 상수를 두지 않는다(예전에 /team/2로 가도 1번 팀이 보이던 원인). 모양은 서버 DTO(`src/lib/domain/types.ts`)를 따르고, enum 라벨은 `src/lib/domain/labels.ts`, 날짜 표기는 `src/lib/domain/format.ts`만 쓴다 — 백엔드가 붙으면 selectors 함수 안만 API 호출로 바뀐다.
+8. **플로우가 Figma와 서버 사이에서 엇갈리면 서버(`D-X-W-Service-2/moyeorock-server`)가 정답이다.** 대표 결정: 전체 모임 검색 없음(모임 찾기 → 게시판 모임 모집), 팀 쪽 "셋리스트" → "선택곡", 북마크 대상은 유저·팀·곡, 카카오 신규 회원은 약관 동의 후 가입, 이메일 로그인은 `onboardingCompleted`로 홈/온보딩 분기, 합주는 팀 단위라 일정 탭에서 추가하면 팀을 고른다, 공연 팀은 공연 정보에서 만들거나 팀 만들기에서 공연을 먼저 고른다.
+
+## WDS 함정 (실제로 앱이 깨졌던 것)
+
+- **`useAlert`에 문자열 라벨을 넘기면 앱 전체가 내려간다.** WDS AlertArea가 `confirm`/`cancel`을 `Slot`으로 감싸 onClick을 꽂기 때문에 React 엘리먼트여야 한다("Slot failed to slot onto its Slottable"). 화면에서는 `useAlert` 대신 `@/components/ui/useAppAlert`를 쓴다 — 라벨 문자열만 넘기면 `AlertActionAreaButton`으로 감싸 준다.
+- **`ListCell`은 행을 누르면 안쪽 첫 버튼을 대신 한 번 더 누른다.** chevron(`ListCellContent variant="chevron"`도 role=button)이 있는 행에 onClick을 걸면 이동이 두 번 되고, 행 안의 보조 버튼(거절·초대·저장 토글)은 행만 눌러도 같이 눌린다. 행 onClick은 `rowClick(handler)`, 행 안의 버튼은 `innerClick(handler)`로 감싼다(`@/components/ui/listCellEvents`). WDS가 `composeEventHandlers`로 우리 핸들러를 먼저 부르고 `defaultPrevented`면 대신 누르기를 건너뛰는 점을 이용한다.
+- **`ModalContent`는 좌우 여백을 주지 않는다.** 여백은 `ModalContentItem`이 준다 — 시트는 `BottomSheet`를 쓰면 이미 처리돼 있다.
+- **Tailwind 클래스로 WDS 컴포넌트 모양(radius 등)을 덮을 수 없다.** WDS 스타일(emotion)이 우선한다. 꼭 바꿔야 하면 `sx`로.
 
 ## 다크(네온) 브랜드 컬러 — WDS 시맨틱 변수 오버라이드
 
@@ -77,16 +105,19 @@ WDS `Typography`의 스케일(`node_modules/@wanteddev/wds/dist/components/typog
 
 카카오 로그인 아이콘이 필요하면 `IconLogoKakao`/`IconLogoKakaoColor`가 있다.
 
-## Bottom Nav — 5개 탭, Stream과 같은 이유로 로컬 컴포넌트
+## Bottom Nav — 5개 탭, WDS `BottomNavigation`
 
-Figma 홈 화면(`nodeId 101:11659`)의 Bottom Nav는 **홈 · 일정 · 모임 · 게시판 · 마이** 5탭이다(팀/공연은 모임 하위 플로우로 들어간다 — "모임/03 모임 공연", "팀/03 팀 공연" 등 nodeId 목록 참고). WDS `BottomNavigation`은 iOS 반투명 배경 + body 스크롤 기준 투명 전환 로직이 내장돼 있어(우리 레이아웃은 헤더/본문 내부 스크롤 구조라 항상 오판) 쓰지 않고, `src/components/ui/BottomNav.tsx`에 로컬로 새로 만들었다(stream-client-web과 동일한 판단).
+**홈 · 일정 · 모임 · 게시판 · 마이** 5탭(`src/components/ui/BottomNav.tsx`). 예전에는 WDS `BottomNavigation`의 스크롤 끝 투명 처리(`data-scroll-end`, body 스크롤 기준이라 내부 스크롤 구조인 이 앱에서는 항상 "끝"으로 판정) 때문에 로컬로 만들었지만, 이제는 WDS 컴포넌트를 쓰고 `sx`로 두 가지만 덮는다 — `data-scroll-end`여도 배경·테두리 유지, 선택 탭 색은 primary(레드)가 아니라 `label.strong`(흰색).
 
-선택 상태는 별도 Fill 아이콘이 아니라 **같은 아이콘의 색만** `text-label-strong`(선택) ↔ `text-label-assistive`(비선택)로 바뀐다 — 라벨 타이포도 `bold`/`regular`로만 갈린다. accent(레드)를 쓰지 않는다.
+활성 탭은 경로 접두사로 정한다(`ScreenLayout`의 `TAB_PREFIXES`). 모임 탭은 모임(`/crew`)·팀(`/team`)·공연(`/show`) 세 도메인을 묶는다.
 
-## `ScreenHeader` — 두 variant
+## `ScreenHeader` — 세 variant, 전부 WDS `TopNavigation`
 
-- `variant="home"`: 최상위 탭 화면(홈 등)의 상단 바. WDS 인스턴스가 아니라 Figma "Top Bar"(nodeId 101:11537) 자리를 대신하는 로컬 마크업인데, 로고를 크게 쓰기로 하면서 워드마크는 본문 히어로로 내려갔다 — 헤더는 스크롤 영역 밖이라 늘 자리를 차지하기 때문이다. 지금은 `trailing` 아이콘만 오른쪽에 둔다.
-- `variant="normal"`(기본값): 하위 화면의 뒤로가기 헤더. WDS `TopNavigation`을 그대로 쓴다(`background={false}`, `leadingContent`, `trailingContent`, `variant="normal"`). 아직 실제 뒤로가기 헤더가 있는 화면을 구현하기 전이라 세부 스펙(패딩 등)은 다음 화면 구현 시 `get_design_context`로 대조해서 확정한다.
+- `variant="title"`: 탭 루트(일정·모임·게시판·마이) — WDS `display` 변형(큰 제목) + trailing.
+- `variant="normal"`(기본): 하위 화면 — 뒤로가기(`TopNavigationButton` + `IconChevronLeft`, 기본 `navigate(-1)`, `onBack`으로 바꿀 수 있음) + 가운데 제목 + trailing.
+- `variant="home"`: 홈 — 로고가 본문 히어로에 있어 trailing 아이콘만.
+
+좌우 여백은 `index.css`에서 `--wds-top-navigation-padding-x`를 본문 여백(1.25rem)과 맞췄다. 화면에서 헤더 div나 뒤로가기 버튼을 직접 만들지 않는다.
 
 ## 화면 전환 — Shared Axis (View Transitions API)
 
@@ -100,17 +131,14 @@ Bottom Nav로 탭을 바꿀 때 이전 화면은 페이드아웃하며 진행 �
 - `document.startViewTransition`이 없는 브라우저(iOS 18 미만 WKWebView 등)에서는 React Router가 그냥 즉시 전환한다 — 동작 차이는 없고 애니메이션만 빠진다. `prefers-reduced-motion: reduce`에서도 애니메이션을 끈다.
 - 하위 화면 push/pop에는 아직 걸지 않았다 — 거는 경우 뒤로가기 방향 판별이 따로 필요하다.
 
-## 이미 구현된 화면 (참고용 실제 코드)
-
-| Figma nodeId | 화면 | 코드 |
-|---|---|---|
-| `101:11297` | 온보딩/01 로그인 | `src/features/onboarding/OnboardingLoginScreen.tsx` (`/login`) |
-| `101:11527` | 홈/01 홈 대시보드 | `src/features/home/HomeScreen.tsx` (`/`) |
-
 ## 라우팅 컨벤션
 
-`src/app/router.tsx` 한 곳에서 전부 정의한다(레퍼런스와 동일). 새 화면을 추가할 때:
-1. `src/features/<섹션>/<화면이름>Screen.tsx` 파일을 만든다.
-2. Bottom Nav가 없는 화면(하단 고정 버튼이 있는 폼/상세 등)은 `handle: { hasBottomNav: false } satisfies ScreenRouteHandle`를 준다.
-3. 헤더가 필요하면 화면 컴포넌트 안에서 `useScreenHeader(<ScreenHeader ... />)`를 호출한다 — `ScreenLayout`을 직접 감쌀 필요 없다.
-4. 경로 세그먼트는 한글 대신 의미가 통하는 영문(kebab/camel 아님, 짧은 단어)으로 짓는다 — 예: 모임은 `/crew`, 게시판은 `/board`, 마이는 `/mine`, 일정은 `/schedule`. Bottom Nav 탭과 매핑되는 경로는 `src/components/ui/ScreenLayout.tsx`의 `BOTTOM_NAV_PATHS`와 반드시 맞춘다.
+`src/app/router.tsx`가 섹션별 `src/features/<섹션>/routes.tsx`를 합친다. 각 routes 파일 머리 주석에 그 섹션의 화면 흐름(서버 기준)을 적어 둔다 — 새 화면을 추가할 때 그 주석도 함께 고친다.
+
+1. 화면 파일은 `src/features/<섹션>/<화면이름>Screen.tsx`. 섹션 = 서버 도메인(온보딩 auth·user / 홈 dashboard·notification / 일정 rehearsal / 모임 group·notice / 팀 team·선택곡 / 공연 performance·셋리스트 / 게시판 recruit·join / 마이 user·bookmark). 여러 섹션이 같이 쓰는 가입 신청·초대 시트는 `src/features/join/`.
+2. Bottom Nav가 없는 화면(하단 고정 버튼이 있는 폼/상세 등)은 `handle: { hasBottomNav: false } satisfies ScreenRouteHandle`.
+3. 헤더는 화면 안에서 `useScreenHeader(<ScreenHeader … />)`.
+4. 경로는 짧은 영문 단어: 모임 `/crew`, 팀 `/team`, 공연 `/show`, 게시판 `/board`, 마이 `/mine`, 일정 `/schedule`, 다른 사용자 `/users/:userId`. 탭 루트 경로는 `ScreenLayout`의 `BOTTOM_NAV_PATHS`와 맞춘다.
+5. 같은 화면 안의 탭·필터는 라우트가 아니라 쿼리로 남긴다(`/crew?tab=team`, `/board?type=team`, `/mine/invitations?tab=applied`) — `setSearchParams(…, { replace: true })`로 바꿔서 탭을 오가도 히스토리가 쌓이지 않게 한다.
+6. 히어로 + 탭 구조(모임 홈/공연/멤버/관리, 팀 홈/공연/선택곡/일정/멤버/관리, 공연 정보/관리)의 탭 전환과, 완료 화면에서 다음 화면으로 가는 이동은 `navigate(path, { replace: true })` — 뒤로가기 한 번이면 들어오기 전 화면으로 돌아간다.
+7. 권한이 없는 동작은 버튼을 숨긴다(모임장만 관리·공연 만들기·공지·셋리스트 확정, 팀장만 관리·곡 추가·넘기기·초대).

@@ -1,38 +1,71 @@
-import { Button, Typography } from "@wanteddev/wds";
-import { IconChevronLeft } from "@wanteddev/wds-icon";
+import { Checkbox, Typography } from "@wanteddev/wds";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import BottomActionArea from "@/components/ui/BottomActionArea";
 import ScreenHeader from "@/components/ui/ScreenHeader";
+import TextInputField from "@/components/ui/TextInputField";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
-import FormField from "@/features/onboarding/components/FormField";
 
-// Figma: 온보딩/07 이메일 회원가입 (nodeId 142:19196). 이 화면은 실제 WDS `Textinput/Textfield`
-// 인스턴스(19:4270, 블러 배경)를 쓰지만, 온보딩 흐름 전체(02/03/05)가 더 단순한 로컬 박스
-// 스타일을 쓰고 있어 흐름 안에서 입력 박스 모양을 통일하려고 같은 FormField를 재사용했다.
+const PASSWORD_RULE = "8~64자, 영문·숫자·특수문자를 각각 1자 이상";
+
+// 서버 POST /v1/auth/signup 비밀번호 규칙과 같게 맞춘다 — 여기서 통과한 값이 서버에서 400으로 튕기지 않게.
+function isValidPassword(password: string): boolean {
+  return (
+    password.length >= 8 &&
+    password.length <= 64 &&
+    /[A-Za-z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9\s]/.test(password)
+  );
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// Figma: 온보딩/07 이메일 회원가입 (nodeId 142:19196).
+// 서버 POST /v1/auth/signup {email, password, name, privacyAgreed}. privacyAgreed=true가 아니면 가입이
+// 안 되므로 Figma에 없던 개인정보 처리방침 동의를 하단 버튼 위에 붙였다. 이름은 서버가 임시 닉네임으로
+// 쓰기 때문에 다음 닉네임 단계의 기본값으로 넘긴다.
 function OnboardingSignupScreen() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
 
-  useScreenHeader(
-    <ScreenHeader
-      leading={
-        <button onClick={() => navigate(-1)} type="button">
-          <IconChevronLeft className="size-6 text-label-strong" />
-        </button>
-      }
-      variant="normal"
-    />,
-  );
+  useScreenHeader(<ScreenHeader />);
 
-  const canSubmit = name && email && password && password === passwordConfirm;
+  // 입력을 시작한 뒤에만 에러를 보여 준다 — 빈 칸부터 빨간 문구가 뜨지 않게.
+  const emailError =
+    email && !isValidEmail(email) ? "이메일 형식을 확인해 주세요" : undefined;
+  const passwordError =
+    password && !isValidPassword(password) ? PASSWORD_RULE : undefined;
+  const passwordConfirmError =
+    passwordConfirm && passwordConfirm !== password
+      ? "비밀번호가 일치하지 않아요"
+      : undefined;
+
+  const canSubmit =
+    name.trim() !== "" &&
+    isValidEmail(email) &&
+    isValidPassword(password) &&
+    passwordConfirm === password &&
+    privacyAgreed;
+
+  // 계정이 만들어진 뒤에는 가입 폼으로 되돌아오지 않게 replace.
+  const signup = () => {
+    navigate("/onboarding/nickname", {
+      replace: true,
+      state: { nickname: name.trim() },
+    });
+  };
 
   return (
-    <div className="flex h-full w-full flex-col bg-background px-5">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto pt-2">
+    <div className="flex h-full w-full flex-col bg-background">
+      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-6">
         <Typography
           color="semantic.label.strong"
           variant="title3"
@@ -40,48 +73,69 @@ function OnboardingSignupScreen() {
         >
           이메일로 가입할게요
         </Typography>
-        <FormField
+        <TextInputField
+          autoComplete="name"
           label="이름"
           onChange={setName}
           placeholder="이름을 입력해 주세요"
           value={name}
         />
-        <FormField
+        <TextInputField
+          autoComplete="email"
+          error={emailError}
           label="이메일"
           onChange={setEmail}
           placeholder="example@email.com"
           type="email"
           value={email}
         />
-        <FormField
+        <TextInputField
+          autoComplete="new-password"
+          error={passwordError}
           label="비밀번호"
+          maxLength={64}
+          message={PASSWORD_RULE}
           onChange={setPassword}
-          placeholder="영문, 숫자 포함 8자 이상"
+          placeholder="비밀번호를 입력해 주세요"
           type="password"
           value={password}
         />
-        <FormField
+        <TextInputField
+          autoComplete="new-password"
+          error={passwordConfirmError}
           label="비밀번호 확인"
+          maxLength={64}
           onChange={setPasswordConfirm}
           placeholder="비밀번호를 한 번 더 입력해 주세요"
           type="password"
           value={passwordConfirm}
         />
       </div>
-      <div className="flex flex-col items-center bg-surface-elevated px-5 pt-3 pb-[34px]">
-        <Button
-          className="shadow-neon-sm"
-          color="primary"
-          disabled={!canSubmit}
-          fullWidth
-          onClick={() => navigate("/onboarding/nickname")}
-          size="large"
-          sx={{ paddingBlock: "16px" }}
-          variant="solid"
-        >
-          가입하기
-        </Button>
-      </div>
+      <BottomActionArea
+        disabled={!canSubmit}
+        extraContent={
+          <label
+            className="flex w-full items-center gap-2"
+            htmlFor="signup-privacy"
+          >
+            <Checkbox
+              checked={privacyAgreed}
+              id="signup-privacy"
+              onCheckedChange={setPrivacyAgreed}
+              size="small"
+            />
+            <Typography
+              color="semantic.label.normal"
+              variant="label1"
+              weight="regular"
+            >
+              [필수] 개인정보 처리방침 동의
+            </Typography>
+          </label>
+        }
+        label="가입하기"
+        onClick={signup}
+      />
     </div>
   );
 }

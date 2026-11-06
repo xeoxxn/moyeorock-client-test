@@ -1,287 +1,225 @@
-import { Tab, TabList, TabListItem, Typography } from "@wanteddev/wds";
+import {
+  Button,
+  Category,
+  CategoryList,
+  CategoryListItem,
+  Tab,
+  TabList,
+  TabListItem,
+  TopNavigationButton,
+  Typography,
+} from "@wanteddev/wds";
 import {
   IconBell,
   IconLocation,
+  IconMusicMicrophone,
   IconPersons,
   IconPlus,
-  IconSearch,
 } from "@wanteddev/wds-icon";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import Badge from "@/components/ui/Badge";
+import EmptyState from "@/components/ui/EmptyState";
+import MetaItem from "@/components/ui/MetaItem";
+import PressableCard from "@/components/ui/PressableCard";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import {
+  INSTRUMENT_LABEL,
+  INSTRUMENT_OPTIONS,
+  RECRUIT_STATUS_LABEL,
+  REGION_LABEL,
+  TARGET_TYPE_LABEL,
+} from "@/lib/domain/labels";
+import type {
+  Instrument,
+  RecruitPost,
+  TargetType,
+  WantedSlot,
+} from "@/lib/domain/types";
+import { getPostableTargets, getPosts, getTargetName } from "@/mocks/selectors";
 
-// Figma: 게시판/01 게시판 (nodeId 101:24187). 상단 "모임 | 공연 | 팀" Tab은 모집글의 카테고리
-// 구분이라(화면 전환이 아니다) POSTS를 category로 필터링한다.
+// Figma: 게시판/01 게시판 (101:24187). 게시판 = 모집 공고(GET /recruit-posts).
+// - 탭은 서버 공고 대상(targetType) 그대로 모임|팀 두 개다. Figma의 "공연" 탭은 서버에 공연 공고가 없어 뺐다.
+//   다른 화면(팀 목록의 "팀 찾기" 등)이 ?type=team으로 바로 팀 탭을 열 수 있게 탭 값을 URL에 둔다.
+// - 필터는 서버 목록 필터(status·instrument) 중 Figma 칩 줄에 있는 것 — 전체 · 모집중 · 세션별.
+// - 검색 아이콘은 뺐다(서버에 공고 키워드 검색이 없다).
 
-type Category = "crew" | "show" | "team";
-type Status = "recruiting" | "closed";
+type BoardTab = "group" | "team";
+type BoardFilter = "ALL" | "OPEN" | Instrument;
 
-interface Post {
-  id: string;
-  category: Category;
-  status: Status;
-  kind: string;
-  title: string;
-  description: string;
-  place: string;
-  members: string;
-  genreTags: string[];
+const TAB_TARGET: Record<BoardTab, TargetType> = {
+  group: "GROUP",
+  team: "TEAM",
+};
+
+const FILTERS: { value: BoardFilter; label: string }[] = [
+  { label: "전체", value: "ALL" },
+  { label: RECRUIT_STATUS_LABEL.OPEN, value: "OPEN" },
+  ...INSTRUMENT_OPTIONS.map((instrument) => ({
+    label: INSTRUMENT_LABEL[instrument],
+    value: instrument,
+  })),
+];
+
+function formatSlots(slots: WantedSlot[]): string {
+  return slots
+    .map((slot) => `${INSTRUMENT_LABEL[slot.instrument]} ${slot.count}명`)
+    .join(" · ");
 }
 
-const POSTS: Post[] = [
-  {
-    category: "crew",
-    description:
-      "홍대에서 활동해요. 인디 록과 얼터너티브를 좋아하는 분이면 좋아요.",
-    genreTags: ["모집중", "보컬"],
-    id: "p1",
-    kind: "모임 모집",
-    members: "3/5명",
-    place: "홍대 모여락 스튜디오",
-    status: "recruiting",
-    title: "홍대 주말 합주 보컬을 찾고 있어요",
-  },
-  {
-    category: "crew",
-    description:
-      "합정에서 활동해요. 수요일 저녁, 부담 없이 오래 함께할 분을 찾아요.",
-    genreTags: ["모집중", "베이스"],
-    id: "p2",
-    kind: "모임 모집",
-    members: "4/5명",
-    place: "합정 모여락 스튜디오",
-    status: "recruiting",
-    title: "합정 퇴근 후 베이스 세션 구해요",
-  },
-  {
-    category: "crew",
-    description:
-      "신촌에서 활동해요. 서로의 데모를 듣고 편곡 아이디어를 나눠요.",
-    genreTags: ["모집중", "기타"],
-    id: "p3",
-    kind: "모임 모집",
-    members: "3/6명",
-    place: "신촌 모여락 스튜디오",
-    status: "recruiting",
-    title: "신촌 자작곡 스터디 멤버 구해요",
-  },
-  {
-    category: "crew",
-    description:
-      "망원에서 활동해요. 인디 록과 얼터너티브를 좋아하는 분이면 좋아요.",
-    genreTags: ["모집 완료", "보컬"],
-    id: "p4",
-    kind: "모임 모집",
-    members: "5/5명",
-    place: "망원 모여락 스튜디오",
-    status: "closed",
-    title: "망원 주말 합주 보컬을 찾고 있어요",
-  },
-  {
-    category: "show",
-    description:
-      "2026 가을 정기공연에 함께할 팀을 찾아요. 어쿠스틱 셋 환영해요.",
-    genreTags: ["모집중", "팀"],
-    id: "p5",
-    kind: "공연 참가팀 모집",
-    members: "3팀 확정",
-    place: "홍대 롤링홀",
-    status: "recruiting",
-    title: "가을 정기공연 참가 팀을 구해요",
-  },
-  {
-    category: "team",
-    description: "블루 웨이브, 다음 합주 드러머가 급하게 필요해요.",
-    genreTags: ["모집중", "드럼"],
-    id: "p6",
-    kind: "팀 멤버 모집",
-    members: "1/1명",
-    place: "합주실 A",
-    status: "recruiting",
-    title: "블루 웨이브 드러머 급구해요",
-  },
-];
+function matchesFilter(post: RecruitPost, filter: BoardFilter): boolean {
+  if (filter === "ALL") return true;
+  if (filter === "OPEN") return post.status === "OPEN";
+  return post.wantedSlots.some((slot) => slot.instrument === filter);
+}
+
+function emptyTitle(tab: BoardTab, filter: BoardFilter): string {
+  const target = TARGET_TYPE_LABEL[TAB_TARGET[tab]];
+  if (filter === "ALL") return `아직 ${target} 모집 공고가 없어요`;
+  if (filter === "OPEN") return `모집중인 ${target} 공고가 없어요`;
+  return `${INSTRUMENT_LABEL[filter]} 세션을 찾는 ${target} 공고가 없어요`;
+}
+
+function PostCard({ post }: { post: RecruitPost }) {
+  const navigate = useNavigate();
+  const isClosed = post.status === "CLOSED";
+  const targetName = getTargetName(post.targetType, post.targetId);
+
+  return (
+    <PressableCard
+      dimmed={isClosed}
+      onClick={() => navigate(`/board/${post.id}`)}
+    >
+      <div className="flex items-center gap-1.5">
+        <Badge tone={isClosed ? "outline" : "accent"}>
+          {RECRUIT_STATUS_LABEL[post.status]}
+        </Badge>
+        <Typography
+          color="semantic.label.assistive"
+          variant="caption1"
+          weight="bold"
+        >
+          {TARGET_TYPE_LABEL[post.targetType]} 모집
+        </Typography>
+      </div>
+      <Typography color="semantic.label.strong" variant="body1" weight="bold">
+        {post.title}
+      </Typography>
+      <Typography
+        className="line-clamp-2"
+        color="semantic.label.alternative"
+        variant="label2"
+        weight="regular"
+      >
+        {post.body}
+      </Typography>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 pt-0.5">
+        <MetaItem icon={<IconLocation />}>{REGION_LABEL[post.region]}</MetaItem>
+        {targetName && <MetaItem icon={<IconPersons />}>{targetName}</MetaItem>}
+        <MetaItem icon={<IconMusicMicrophone />}>
+          {formatSlots(post.wantedSlots)}
+        </MetaItem>
+      </div>
+    </PressableCard>
+  );
+}
 
 function BoardScreen() {
   const navigate = useNavigate();
-  // 홈의 "공연 전체"처럼 다른 화면이 특정 탭을 바로 열 수 있도록 ?category=로 초기 탭을 받는다.
-  // 그 뒤 탭 전환은 로컬 state로만 처리한다(탭은 화면 전환이 아니라 목록 필터라 URL을 더럽히지 않는다).
-  const [searchParams] = useSearchParams();
-  const initialCategory = searchParams.get("category");
-  const [category, setCategory] = useState<Category>(
-    initialCategory === "show" || initialCategory === "team"
-      ? initialCategory
-      : "crew",
-  );
-  const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: BoardTab = searchParams.get("type") === "team" ? "team" : "group";
+  const [filter, setFilter] = useState<BoardFilter>("ALL");
+  const canWrite = getPostableTargets().length > 0;
 
   useScreenHeader(
     <ScreenHeader
       title="게시판"
       trailing={
-        <>
-          <IconSearch className="size-6 text-label-normal" />
-          <IconBell className="size-6 text-label-normal" />
-        </>
+        <TopNavigationButton
+          aria-label="알림"
+          onClick={() => navigate("/notifications")}
+        >
+          <IconBell />
+        </TopNavigationButton>
       }
       variant="title"
     />,
   );
 
-  const posts = POSTS.filter(
+  const posts = getPosts().filter(
     (post) =>
-      post.category === category &&
-      (statusFilter === "all" || post.status === statusFilter),
+      post.targetType === TAB_TARGET[tab] && matchesFilter(post, filter),
   );
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
       <Tab
-        onValueChange={(value) => setCategory(value as Category)}
-        value={category}
+        // 탭 전환은 같은 목록의 보기 전환이라 히스토리를 쌓지 않는다.
+        onValueChange={(value) =>
+          setSearchParams({ type: value }, { replace: true })
+        }
+        value={tab}
       >
         <TabList resize="fill" size="medium">
-          <TabListItem value="crew">모임</TabListItem>
-          <TabListItem value="show">공연</TabListItem>
-          <TabListItem value="team">팀</TabListItem>
+          <TabListItem value="group">{TARGET_TYPE_LABEL.GROUP}</TabListItem>
+          <TabListItem value="team">{TARGET_TYPE_LABEL.TEAM}</TabListItem>
         </TabList>
       </Tab>
 
-      <div className="scrollbar-hidden flex-1 overflow-y-auto">
-        <div className="flex gap-1.5 px-5 pt-4 pb-2">
-          <button
-            className={
-              statusFilter === "all"
-                ? "rounded-lg bg-label-strong px-2 py-1.5"
-                : "rounded-lg border border-line-neutral px-2 py-1.5"
-            }
-            onClick={() => setStatusFilter("all")}
-            type="button"
+      <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
+        <div className="pt-3 pb-1">
+          <Category
+            onValueChange={(value) => setFilter(value as BoardFilter)}
+            value={filter}
           >
-            <Typography
-              color={
-                statusFilter === "all"
-                  ? "semantic.inverse.label"
-                  : "semantic.label.alternative"
-              }
-              variant="label1"
-              weight="medium"
-            >
-              전체
-            </Typography>
-          </button>
-          <button
-            className={
-              statusFilter === "recruiting"
-                ? "rounded-lg bg-label-strong px-2 py-1.5"
-                : "rounded-lg border border-line-neutral px-2 py-1.5"
-            }
-            onClick={() => setStatusFilter("recruiting")}
-            type="button"
-          >
-            <Typography
-              color={
-                statusFilter === "recruiting"
-                  ? "semantic.inverse.label"
-                  : "semantic.label.alternative"
-              }
-              variant="label1"
-              weight="medium"
-            >
-              모집중
-            </Typography>
-          </button>
+            <CategoryList horizontalPadding size="small">
+              {FILTERS.map((item) => (
+                <CategoryListItem key={item.value} value={item.value}>
+                  {item.label}
+                </CategoryListItem>
+              ))}
+            </CategoryList>
+          </Category>
         </div>
 
-        <div className="flex flex-col px-5 pb-24">
-          {posts.map((post, index) => (
-            <button
-              className={
-                index === 0
-                  ? "flex flex-col items-start gap-1.5 py-4 text-left"
-                  : "flex flex-col items-start gap-1.5 border-line-neutral border-t py-4 text-left"
+        {posts.length === 0 ? (
+          <div className="flex flex-1 flex-col justify-center pb-24">
+            <EmptyState
+              description={
+                filter === "ALL"
+                  ? "새 공고가 올라오면 여기에 보여요"
+                  : "다른 조건으로 바꿔 보세요"
               }
-              key={post.id}
-              onClick={() => navigate(`/board/${post.id}`)}
-              type="button"
-            >
-              <div className="flex items-center gap-1.5">
-                <Badge
-                  tone={post.status === "recruiting" ? "accent" : "outline"}
-                >
-                  {post.genreTags[0]}
-                </Badge>
-                <Typography
-                  color="semantic.label.assistive"
-                  variant="caption1"
-                  weight="bold"
-                >
-                  {post.kind}
-                </Typography>
-              </div>
-              <Typography
-                color={
-                  post.status === "closed"
-                    ? "semantic.label.assistive"
-                    : "semantic.label.normal"
-                }
-                variant="body1"
-                weight="bold"
-              >
-                {post.title}
-              </Typography>
-              <Typography
-                className="line-clamp-1"
-                color="semantic.label.assistive"
-                variant="label2"
-                weight="medium"
-              >
-                {post.description}
-              </Typography>
-              <div className="flex items-center gap-2.5">
-                <div className="flex items-center gap-1">
-                  <IconLocation className="size-3.5 text-label-assistive" />
-                  <Typography
-                    color="semantic.label.assistive"
-                    variant="label2"
-                    weight="medium"
-                  >
-                    {post.place}
-                  </Typography>
-                </div>
-                <div className="flex items-center gap-1">
-                  <IconPersons className="size-3.5 text-label-assistive" />
-                  <Typography
-                    color="semantic.label.assistive"
-                    variant="label2"
-                    weight="medium"
-                  >
-                    {post.members}
-                  </Typography>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+              title={emptyTitle(tab, filter)}
+            />
+          </div>
+        ) : (
+          // 글쓰기 버튼이 마지막 카드를 가리지 않게 아래 여백을 넉넉히 둔다.
+          <div className="flex flex-col gap-3 px-5 pt-3 pb-24">
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </div>
+        )}
       </div>
 
-      <button
-        className="absolute right-5 bottom-5 flex items-center gap-1.5 rounded-full bg-accent px-5 py-3.5 shadow-[0_4px_12px_rgba(0,0,0,0.3)]"
-        onClick={() => navigate("/board/write")}
-        type="button"
-      >
-        <IconPlus className="size-5 text-static-white" />
-        <Typography
-          color="semantic.static.white"
-          variant="label1"
-          weight="bold"
-        >
-          글쓰기
-        </Typography>
-      </button>
+      {/* 공고는 현재 팀장·모임장만 쓸 수 있어서(서버 규칙) 쓸 대상이 없으면 버튼을 숨긴다. */}
+      {canWrite && (
+        <div className="absolute right-5 bottom-5">
+          <Button
+            className="shadow-neon-md"
+            color="primary"
+            leadingContent={<IconPlus />}
+            onClick={() => navigate("/board/write")}
+            size="medium"
+            variant="solid"
+          >
+            글쓰기
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

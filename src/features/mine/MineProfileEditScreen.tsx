@@ -1,152 +1,140 @@
-import { Chip, TextField, Typography } from "@wanteddev/wds";
-import { IconChevronLeft, IconChevronRight } from "@wanteddev/wds-icon";
+import {
+  Avatar,
+  Chip,
+  FormField,
+  FormLabel,
+  TextButton,
+  TopNavigationButton,
+  useToast,
+} from "@wanteddev/wds";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import mascotPeace from "@/assets/mascot/peace.png";
 import ScreenHeader from "@/components/ui/ScreenHeader";
+import SelectField from "@/components/ui/SelectField";
+import TextInputField from "@/components/ui/TextInputField";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import {
+  GENRE_LABEL,
+  GENRE_OPTIONS,
+  REGION_LABEL,
+  REGION_OPTIONS,
+} from "@/lib/domain/labels";
+import type { Genre, Region } from "@/lib/domain/types";
+import { getMe } from "@/mocks/selectors";
 
-// Figma: 마이/02 프로필 수정 (nodeId 101:25470)
-const MUSIC_TASTES = ["인디", "펑크", "록", "어쿠스틱", "발라드", "메탈"];
+// Figma: 마이/02 프로필 수정 — 서버 PUT /users/me(UserUpdateRequest: nickname·region·genres·bio·
+// profileImage·isRecommendable·isActivityPublic). 세션은 별도 API(PUT /users/me/instruments)라
+// 마이의 "세션 수정"(/mine/session)에서 바꾼다. Figma의 "세션 · 실력 수정" 행은 뺐다 — 눌러서
+// 넘어가면 이 화면에서 고친 내용이 저장 없이 사라진다.
+
+const NICKNAME_MAX_LENGTH = 20;
+
+const REGION_SELECT_OPTIONS = REGION_OPTIONS.map((region) => ({
+  label: REGION_LABEL[region],
+  value: region,
+}));
 
 function MineProfileEditScreen() {
   const navigate = useNavigate();
-  const [selectedTastes, setSelectedTastes] = useState<string[]>(["펑크"]);
+  const toast = useToast();
+  const me = getMe();
+  const [nickname, setNickname] = useState(me.nickname);
+  const [bio, setBio] = useState(me.bio);
+  const [region, setRegion] = useState<Region | "">(me.region);
+  const [genres, setGenres] = useState<Genre[]>(me.genres);
 
-  const toggleTaste = (taste: string) => {
-    setSelectedTastes((prev) =>
-      prev.includes(taste) ? prev.filter((t) => t !== taste) : [...prev, taste],
+  const canSave = nickname.trim() !== "";
+
+  const toggleGenre = (genre: Genre) =>
+    setGenres((prev) =>
+      prev.includes(genre)
+        ? prev.filter((item) => item !== genre)
+        : [...prev, genre],
     );
+
+  const save = () => {
+    toast({ content: "프로필을 저장했어요", variant: "positive" });
+    navigate(-1);
   };
 
   useScreenHeader(
     <ScreenHeader
-      leading={
-        <button onClick={() => navigate(-1)} type="button">
-          <IconChevronLeft className="size-6 text-label-normal" />
-        </button>
-      }
       title="프로필 수정"
       trailing={
-        <button onClick={() => navigate(-1)} type="button">
-          <Typography
-            className="text-glow-sm"
-            color="semantic.primary.normal"
-            variant="body1"
-            weight="bold"
-          >
-            저장
-          </Typography>
-        </button>
+        <TopNavigationButton
+          color="primary"
+          disabled={!canSave}
+          onClick={save}
+          variant="text"
+        >
+          저장
+        </TopNavigationButton>
       }
-      variant="normal"
     />,
   );
 
   return (
-    <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
-      <div className="flex flex-col items-center gap-5 px-5 pt-4 pb-8">
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex size-24 items-center justify-center rounded-full bg-surface">
-            <img alt="" className="size-[84px]" src={mascotPeace} />
-          </div>
-          <button type="button">
-            <Typography
-              className="text-glow-sm"
-              color="semantic.primary.normal"
-              variant="label1"
-              weight="bold"
-            >
-              캐릭터 변경
-            </Typography>
-          </button>
-        </div>
-
-        <label className="flex w-full flex-col gap-2" htmlFor="mine-nickname">
-          <Typography
-            color="semantic.label.normal"
-            variant="label1"
-            weight="bold"
-          >
-            닉네임
-          </Typography>
-          <TextField defaultValue="김광철" id="mine-nickname" width="100%" />
-        </label>
-
-        <label className="flex w-full flex-col gap-2" htmlFor="mine-bio">
-          <Typography
-            color="semantic.label.normal"
-            variant="label1"
-            weight="bold"
-          >
-            한 줄 소개
-          </Typography>
-          <TextField
-            defaultValue="잘 부탁드립니다."
-            id="mine-bio"
-            width="100%"
-          />
-        </label>
-
-        <label className="flex w-full flex-col gap-2" htmlFor="mine-region">
-          <Typography
-            color="semantic.label.normal"
-            variant="label1"
-            weight="bold"
-          >
-            활동 지역
-          </Typography>
-          <TextField defaultValue="서울" id="mine-region" width="100%" />
-        </label>
-
-        <div className="flex w-full flex-col gap-2.5">
-          <Typography
-            color="semantic.label.normal"
-            variant="label1"
-            weight="bold"
-          >
-            음악 취향
-          </Typography>
-          <div className="flex flex-wrap gap-2">
-            {MUSIC_TASTES.map((taste) => (
-              <Chip
-                active={selectedTastes.includes(taste)}
-                key={taste}
-                onClick={() => toggleTaste(taste)}
-                size="medium"
-                variant="outlined"
-              >
-                {taste}
-              </Chip>
-            ))}
-          </div>
-        </div>
-
-        <button
-          className="flex w-full items-center gap-2 py-3"
-          onClick={() => navigate("/mine/session")}
-          type="button"
+    <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-4 pb-8">
+      <div className="flex flex-col items-center gap-2">
+        <Avatar
+          alt=""
+          size="xlarge"
+          src={me.profileImage ?? mascotPeace}
+          variant="person"
+        />
+        {/* 프로필 이미지 업로드(파일 API)는 아직 붙지 않았다 — 자리만 잡아 둔다. */}
+        <TextButton
+          color="primary"
+          onClick={() =>
+            toast({ content: "프로필 사진 바꾸기는 준비 중이에요" })
+          }
+          size="small"
         >
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Typography
-              color="semantic.label.normal"
-              variant="body1"
-              weight="regular"
-            >
-              세션 · 실력 수정
-            </Typography>
-            <Typography
-              color="semantic.label.assistive"
-              variant="label2"
-              weight="regular"
-            >
-              어쿠스틱 · 입문 · 키보드
-            </Typography>
-          </div>
-          <IconChevronRight className="size-4 shrink-0 text-label-assistive" />
-        </button>
+          사진 바꾸기
+        </TextButton>
       </div>
+
+      <TextInputField
+        error={canSave ? undefined : "닉네임을 입력해 주세요"}
+        label="닉네임"
+        maxLength={NICKNAME_MAX_LENGTH}
+        onChange={setNickname}
+        value={nickname}
+      />
+
+      <TextInputField
+        label="한 줄 소개"
+        multiline
+        onChange={setBio}
+        placeholder="나를 소개해 주세요"
+        value={bio}
+      />
+
+      <SelectField
+        label="활동 지역"
+        onChange={setRegion}
+        options={REGION_SELECT_OPTIONS}
+        value={region}
+      />
+
+      <FormField>
+        <FormLabel>음악 취향</FormLabel>
+        <div className="flex flex-wrap gap-2">
+          {GENRE_OPTIONS.map((genre) => (
+            <Chip
+              active={genres.includes(genre)}
+              key={genre}
+              onClick={() => toggleGenre(genre)}
+              size="large"
+              variant="outlined"
+            >
+              {GENRE_LABEL[genre]}
+            </Chip>
+          ))}
+        </div>
+      </FormField>
     </div>
   );
 }
