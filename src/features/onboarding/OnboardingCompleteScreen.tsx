@@ -1,81 +1,72 @@
-import { Button, Typography } from "@wanteddev/wds";
+import { Typography } from "@wanteddev/wds";
 import { useNavigate } from "react-router-dom";
 
 import neonGlow from "@/assets/decorative/neon-glow-complete.svg";
 import mascotLaugh from "@/assets/mascot/laugh.png";
-
-const PROFILE_TAGS = ["서울", "어쿠스틱", "입문", "키보드"];
+import BottomActionArea from "@/components/ui/BottomActionArea";
+import Tag from "@/components/ui/Tag";
+import { formatInstruments, REGION_LABEL } from "@/lib/domain/labels";
+import { getMe } from "@/mocks/selectors";
 
 // Figma: 온보딩/06 가입 완료 (nodeId 101:11500). 헤더·Bottom Nav 없이 전체 화면.
+// 인사말·태그는 방금 저장된 내 프로필(GET /users/me)에서 그린다.
 function OnboardingCompleteScreen() {
   const navigate = useNavigate();
+  const me = getMe();
 
   return (
-    <div className="relative flex h-full w-full flex-col bg-background px-6">
-      <div className="relative flex flex-1 flex-col items-center justify-center gap-3.5">
-        <img
-          alt=""
-          className="pointer-events-none absolute top-1/2 left-1/2 h-[190px] w-[220px] -translate-x-1/2 -translate-y-1/2"
-          src={neonGlow}
-        />
-        <img
-          alt="모여락 마스코트"
-          className="relative size-[190px] drop-shadow-neon-lg"
-          src={mascotLaugh}
-        />
-        <div className="relative flex flex-col items-center text-center">
-          <Typography
-            color="semantic.label.strong"
-            variant="title3"
-            weight="bold"
-          >
-            반가워요,
-          </Typography>
-          <Typography
-            className="text-glow"
-            color="semantic.primary.normal"
-            variant="title3"
-            weight="bold"
-          >
-            김광철님!
-          </Typography>
-        </div>
-        <div className="relative flex flex-wrap justify-center gap-1.5">
-          {PROFILE_TAGS.map((tag) => (
-            <div
-              className="rounded-xl border border-line-solid px-2.5 py-1"
-              key={tag}
+    <div className="flex h-full w-full flex-col bg-background">
+      <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto px-6">
+        <div className="m-auto flex w-full flex-col items-center gap-3.5 py-6">
+          <div className="relative w-1/2 max-w-52">
+            <img
+              alt=""
+              className="pointer-events-none absolute inset-0 size-full scale-125"
+              src={neonGlow}
+            />
+            <img
+              alt="모여락 마스코트"
+              className="relative aspect-square w-full object-contain drop-shadow-neon-lg"
+              src={mascotLaugh}
+            />
+          </div>
+          <div className="flex flex-col items-center text-center">
+            <Typography
+              color="semantic.label.strong"
+              variant="title3"
+              weight="bold"
             >
-              <Typography
-                color="semantic.label.alternative"
-                variant="caption1"
-                weight="medium"
-              >
-                {tag}
-              </Typography>
-            </div>
-          ))}
+              반가워요,
+            </Typography>
+            <Typography
+              className="text-glow"
+              color="semantic.primary.normal"
+              variant="title3"
+              weight="bold"
+            >
+              {me.nickname}님!
+            </Typography>
+          </div>
+          <div className="flex flex-wrap justify-center gap-1.5">
+            <Tag>{REGION_LABEL[me.region]}</Tag>
+            {me.instruments.map((item) => (
+              <Tag key={item.instrument}>{formatInstruments([item], true)}</Tag>
+            ))}
+          </div>
+          <Typography
+            color="semantic.label.alternative"
+            variant="body2"
+            weight="regular"
+          >
+            이제 함께할 모임과 팀을 둘러볼까요?
+          </Typography>
         </div>
-        <Typography
-          className="relative"
-          color="semantic.label.alternative"
-          variant="body2"
-          weight="regular"
-        >
-          이제 함께할 모임과 팀을 둘러볼까요?
-        </Typography>
       </div>
-      <div className="flex flex-col items-center pt-3 pb-[34px]">
-        <Button
-          color="primary"
-          fullWidth
-          onClick={() => navigate("/")}
-          size="large"
-          variant="solid"
-        >
-          모여락 시작하기
-        </Button>
-      </div>
+      <BottomActionArea
+        label="모여락 시작하기"
+        // 온보딩 화면들로 뒤로 가지 않게 replace.
+        onClick={() => navigate("/", { replace: true })}
+      />
     </div>
   );
 }
