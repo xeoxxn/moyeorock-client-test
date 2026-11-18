@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import EmptyState from "@/components/ui/EmptyState";
@@ -19,7 +20,9 @@ function CrewFallback({
   headerTitle,
   title,
 }: CrewFallbackProps) {
-  useScreenHeader(<ScreenHeader title={headerTitle} />);
+  useScreenHeader(
+    useMemo(() => <ScreenHeader title={headerTitle} />, [headerTitle]),
+  );
 
   return (
     <div className="flex flex-1 flex-col justify-center pb-16">
@@ -33,10 +36,10 @@ export function CrewNotFound({ headerTitle }: { headerTitle?: string }) {
   return (
     <CrewFallback
       action={{
-        label: "내 모임 보기",
+        label: "내 모임",
         onClick: () => navigate("/crew", { replace: true }),
       }}
-      description="해체됐거나 주소가 잘못된 모임이에요."
+      description="해체됐거나 주소가 잘못된 모임이에요"
       headerTitle={headerTitle}
       title="없는 모임이에요"
     />
@@ -54,10 +57,10 @@ export function CrewOwnerOnly({
   return (
     <CrewFallback
       action={{
-        label: "모임 홈으로",
+        label: "모임 홈",
         onClick: () => navigate(`/crew/${crewId}`, { replace: true }),
       }}
-      description="모임 정보 수정·가입 승인·공지는 모임장만 할 수 있어요."
+      description="공지·가입 승인·모임 정보 수정은 모임장만 할 수 있어요"
       headerTitle={headerTitle}
       title="모임장만 볼 수 있어요"
     />

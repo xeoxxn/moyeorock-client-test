@@ -1,7 +1,8 @@
-import { Switch, TextButton, Typography } from "@wanteddev/wds";
+import { Switch, Typography } from "@wanteddev/wds";
 import { useId, useState } from "react";
 
 import BottomActionArea from "@/components/ui/BottomActionArea";
+import ScreenBody from "@/components/ui/ScreenBody";
 import TextInputField from "@/components/ui/TextInputField";
 
 export interface NoticeFormValues {
@@ -10,22 +11,22 @@ export interface NoticeFormValues {
   isPinned: boolean;
 }
 
+// 서버 NoticeCreateRequest = NoticeUpdateRequest. 본문은 TEXT 컬럼이라 상한을 합주 메모와 같게 둔다.
+const TITLE_MAX = 100;
+const BODY_MAX = 20000;
+
 interface CrewNoticeFormProps {
-  heading: string;
-  description: string;
   submitLabel: string;
   initialValues?: NoticeFormValues;
   onSubmit: (values: NoticeFormValues) => void;
-  /** 수정 화면에서만 — 있으면 삭제 버튼을 보여준다 */
+  /** 수정 화면에서만 — 있으면 하단에 삭제 버튼을 같이 둔다 */
   onDelete?: () => void;
 }
 
-// Figma: 모임/11 공지 작성(nodeId 142:19296) · 모임/12 공지 수정(nodeId 142:19369) — 문구와 삭제 유무만
-// 다르고 서버 요청도 같은 {title, body, isPinned}라 폼 하나를 함께 쓴다. Figma의 "상단에 고정하기"
-// 체크박스는 켜고 끄는 설정이라 WDS Switch로 바꿨다.
+// 공지 쓰기·수정(Figma에는 없는 화면) — 21 합주 일정 추가·24 모집글 쓰기와 같은 한 화면 폼.
+// 서버 요청이 같은 {title, body, isPinned}라 두 화면이 이 폼을 함께 쓴다. 고정은 켜고 끄는 설정이라
+// WDS Switch로 둔다.
 function CrewNoticeForm({
-  description,
-  heading,
   initialValues,
   onDelete,
   onSubmit,
@@ -39,37 +40,21 @@ function CrewNoticeForm({
   const canSubmit = title.trim() !== "" && body.trim() !== "";
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-6">
-        <div className="flex flex-col gap-1">
-          <Typography
-            color="semantic.label.strong"
-            variant="title3"
-            weight="bold"
-          >
-            {heading}
-          </Typography>
-          <Typography
-            color="semantic.label.alternative"
-            variant="body2"
-            weight="regular"
-          >
-            {description}
-          </Typography>
-        </div>
-
+    <>
+      <ScreenBody className="flex flex-col gap-6 px-5 pt-2">
         <TextInputField
           label="제목"
-          maxLength={100}
+          maxLength={TITLE_MAX}
           onChange={setTitle}
-          placeholder="공지 제목을 입력해 주세요"
+          placeholder="공지 제목"
           value={title}
         />
         <TextInputField
           label="내용"
+          maxLength={BODY_MAX}
           multiline
           onChange={setBody}
-          placeholder="공지 내용을 입력해 주세요"
+          placeholder="모임원에게 알릴 내용을 적어 주세요"
           value={body}
         />
 
@@ -81,19 +66,18 @@ function CrewNoticeForm({
           <span className="flex flex-col gap-0.5">
             <Typography
               as="span"
-              color="semantic.label.normal"
+              color="semantic.label.strong"
               variant="body1"
-              weight="medium"
+              weight="bold"
             >
-              상단에 고정
+              맨 위에 고정
             </Typography>
             <Typography
               as="span"
               color="semantic.label.alternative"
               variant="label2"
-              weight="regular"
             >
-              고정한 공지는 모임 홈 공지 맨 위에 보여요
+              모임 홈 공지 맨 위에 보여요
             </Typography>
           </span>
           <Switch
@@ -102,15 +86,7 @@ function CrewNoticeForm({
             onCheckedChange={setIsPinned}
           />
         </label>
-
-        {onDelete && (
-          <div className="flex">
-            <TextButton color="assistive" onClick={onDelete} size="small">
-              이 공지 삭제하기
-            </TextButton>
-          </div>
-        )}
-      </div>
+      </ScreenBody>
 
       <BottomActionArea
         disabled={!canSubmit}
@@ -118,8 +94,9 @@ function CrewNoticeForm({
         onClick={() =>
           onSubmit({ body: body.trim(), isPinned, title: title.trim() })
         }
+        secondary={onDelete ? { label: "삭제", onClick: onDelete } : undefined}
       />
-    </div>
+    </>
   );
 }
 

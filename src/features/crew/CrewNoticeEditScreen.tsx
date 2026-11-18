@@ -1,8 +1,9 @@
 import { useToast } from "@wanteddev/wds";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import ConfirmSheet from "@/components/ui/ConfirmSheet";
 import ScreenHeader from "@/components/ui/ScreenHeader";
-import { useAppAlert } from "@/components/ui/useAppAlert";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 import CrewFallback, {
   CrewNotFound,
@@ -12,47 +13,46 @@ import CrewNoticeForm from "@/features/crew/components/CrewNoticeForm";
 import type { Group, Notice } from "@/lib/domain/types";
 import { getGroup, getNotice, toId } from "@/mocks/selectors";
 
-// Figma: 모임/12 공지 수정 (nodeId 142:19369) — PUT/DELETE /notices/{id}, 모임장 전용. 모임 홈의
-// 공지 시트에서 "수정"으로 들어온다. 저장·삭제 뒤에는 모임 홈으로 replace.
+// 공지 수정 — PUT/DELETE /notices/{id}, 현재 모임장만(서버). 모임장이 모임 홈의 공지를 누르면 들어온다.
+// 삭제는 되돌릴 수 없어 확정 시트로 한 번 더 묻는다. 저장·삭제 뒤에는 모임 홈으로 replace.
 const HEADER_TITLE = "공지 수정";
 
 function CrewNoticeEdit({ group, notice }: { group: Group; notice: Notice }) {
   const navigate = useNavigate();
-  const alert = useAppAlert();
   const toast = useToast();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  useScreenHeader(<ScreenHeader title={HEADER_TITLE} />);
+  useScreenHeader(useMemo(() => <ScreenHeader title={HEADER_TITLE} />, []));
 
   const backToGroup = () => navigate(`/crew/${group.id}`, { replace: true });
 
-  const remove = async () => {
-    const result = await alert({
-      cancel: "취소",
-      confirm: "삭제",
-      content: "삭제한 공지는 되돌릴 수 없어요.",
-      title: "공지를 삭제할까요?",
-    });
-    if (result !== "confirm") return;
-    toast({ content: "공지를 삭제했어요" });
-    backToGroup();
-  };
-
   return (
-    <CrewNoticeForm
-      description="수정한 내용은 바로 반영돼요"
-      heading="공지를 수정할게요"
-      initialValues={{
-        body: notice.body,
-        isPinned: notice.isPinned,
-        title: notice.title,
-      }}
-      onDelete={remove}
-      onSubmit={() => {
-        toast({ content: "공지를 수정했어요", variant: "positive" });
-        backToGroup();
-      }}
-      submitLabel="수정 완료"
-    />
+    <>
+      <CrewNoticeForm
+        initialValues={{
+          body: notice.body,
+          isPinned: notice.isPinned,
+          title: notice.title,
+        }}
+        onDelete={() => setDeleteOpen(true)}
+        onSubmit={() => {
+          toast({ content: "공지를 저장했어요", variant: "positive" });
+          backToGroup();
+        }}
+        submitLabel="저장"
+      />
+      <ConfirmSheet
+        confirmLabel="삭제"
+        description="삭제한 공지는 되돌릴 수 없어요."
+        onConfirm={() => {
+          toast({ content: "공지를 삭제했어요" });
+          backToGroup();
+        }}
+        onOpenChange={setDeleteOpen}
+        open={deleteOpen}
+        title="공지를 삭제할까요?"
+      />
+    </>
   );
 }
 
@@ -67,10 +67,10 @@ function CrewNoticeEditScreen() {
     return (
       <CrewFallback
         action={{
-          label: "모임 홈으로",
+          label: "모임 홈",
           onClick: () => navigate(`/crew/${group.id}`, { replace: true }),
         }}
-        description="삭제됐거나 주소가 잘못된 공지예요."
+        description="삭제됐거나 주소가 잘못된 공지예요"
         headerTitle={HEADER_TITLE}
         title="없는 공지예요"
       />
