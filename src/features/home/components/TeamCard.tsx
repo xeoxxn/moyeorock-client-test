@@ -7,9 +7,9 @@ import {
 
 import type { UserSummary } from "@/lib/domain/types";
 
-// Figma "Music/Team Card"(483:18606) — 홈 '내 팀' 캐러셀 카드. 한 장씩 크게, 옆으로 넘기면 다음 카드가
-// 오른쪽에 살짝 보인다. 바탕은 표면색 한 가지(팀별 색 없음). 팀 종류 · 이름 · 겹친 아바타 + 내 파트 · 멤버 수.
-// 이름은 카드 항목 이름 규칙대로 16 Bold(Figma 22는 고칠 예정).
+// Figma "Music/Team Card"(483:18606) — 홈 '내 팀' 카드. 폭은 CardPager 칸을 꽉 채운다(화면 폭 − 좌우 20,
+// 한 장씩 넘김). 바탕은 표면색 한 가지(팀별 색 없음). 팀 종류 · 이름 · 겹친 아바타 + 내 파트 · 멤버 수.
+// 이름은 카드 항목 이름 규칙대로 16 Bold(body1 bold).
 interface TeamCardProps {
   /** "공연 팀 · 2026 가을 정기공연" · "독립 팀" */
   kicker: string;
@@ -26,7 +26,7 @@ function TeamCard({ kicker, members, meta, name, onClick }: TeamCardProps) {
   return (
     <WithInteraction variant="light">
       <button
-        className="flex h-30 w-82 shrink-0 snap-start flex-col justify-between rounded-lg bg-surface px-4.5 py-4 text-left"
+        className="flex h-30 w-full flex-col justify-between rounded-lg bg-surface px-4.5 py-4 text-left"
         onClick={onClick}
         type="button"
       >

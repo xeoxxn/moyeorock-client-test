@@ -12,6 +12,7 @@ import {
   useScreenBackdrop,
   useScreenHeader,
 } from "@/components/ui/useScreenHeader";
+import CardPager from "@/features/home/components/CardPager";
 import TeamCard from "@/features/home/components/TeamCard";
 import TodayCard from "@/features/home/components/TodayCard";
 import { listPracticeRecordings } from "@/features/practice/practiceStore";
@@ -33,8 +34,9 @@ import {
   isPerformanceTeam,
 } from "@/mocks/selectors";
 
-// Figma 01 홈(411:11056) — 다가오는 합주(오늘 합주 카드) → 내 팀(옆으로 넘기는 카드) → 다시 듣기(연습 녹음
-// 선반). 서버 대시보드(GET /v1/dashboard)의 합주·내 팀과 연습 녹음 목록을 화면 순서대로 놓는다.
+// Figma 01 홈(411:11056) — 다가오는 합주(오늘 합주 카드) → 내 팀(화면 폭 카드를 한 장씩 넘기고 아래
+// 페이지 점) → 다시 듣기(연습 녹음 선반). 서버 대시보드(GET /v1/dashboard)의 합주·내 팀과 연습 녹음
+// 목록을 화면 순서대로 놓는다.
 
 /** 내 팀의 아직 끝나지 않은 합주 — 시작 시각 순 */
 function getMyUpcomingRehearsals(now: Date): Rehearsal[] {
@@ -148,7 +150,7 @@ function HomeScreen() {
         title="내 팀"
       />
       {teams.length > 0 ? (
-        <div className="scrollbar-hidden flex snap-x snap-mandatory scroll-px-5 gap-2.5 overflow-x-auto px-5">
+        <CardPager label="내 팀 넘기기">
           {teams.map((team) => (
             <TeamCard
               key={team.id}
@@ -159,7 +161,7 @@ function HomeScreen() {
               onClick={() => navigate(`/team/${team.id}`)}
             />
           ))}
-        </div>
+        </CardPager>
       ) : (
         <EmptyState
           action={{ label: "팀 찾기", onClick: () => navigate("/board") }}
