@@ -1,13 +1,19 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
+import MiniPlayer from "@/components/music/MiniPlayer";
 import BottomNav, {
   BOTTOM_NAV_ORDER,
   type BottomNavValue,
 } from "@/components/ui/BottomNav";
-import { ScreenHeaderContext } from "@/components/ui/screenHeaderContext";
+import {
+  type ScreenBackdrop,
+  ScreenChromeContext,
+  ScreenHeaderContext,
+} from "@/components/ui/screenHeaderContext";
 import { useNativeSafeAreaColors } from "@/components/ui/useNativeSafeAreaColors";
+import { cn } from "@/lib/cn";
 
 // Bottom Nav 탭 ↔ 탭 루트 경로. 탭을 누르면 이 경로로 간다.
 const BOTTOM_NAV_PATHS: Record<BottomNavValue, string> = {
@@ -18,13 +24,14 @@ const BOTTOM_NAV_PATHS: Record<BottomNavValue, string> = {
   schedule: "/schedule",
 };
 
-// 경로 → 활성 탭. 탭 루트만 정확히 비교하면 하위 화면(/team/1 등)에서 엉뚱하게 "홈"이 켜진다.
-// 모임 탭은 모임(/crew)·팀(/team)·공연(/show) 세 도메인을 묶는 탭이라 셋 다 모임으로 본다.
+// 경로 → 활성 탭. 모임 탭은 모임(/crew)·팀(/team)·공연(/show)·다른 사용자(/users)를 묶고,
+// 연습 분석(/practice)은 홈의 '다시 듣기'에서 들어가므로 홈으로 본다.
 const TAB_PREFIXES: [string, BottomNavValue][] = [
   ["/schedule", "schedule"],
   ["/crew", "crew"],
   ["/team", "crew"],
   ["/show", "crew"],
+  ["/users", "crew"],
   ["/board", "board"],
   ["/mine", "mine"],
 ];
@@ -36,38 +43,54 @@ function getBottomNavValueFromPath(pathname: string): BottomNavValue {
   return matched?.[1] ?? "home";
 }
 
+const BACKDROP_CLASS: Record<ScreenBackdrop, string> = {
+  "cover-blue": "cover-glow-blue h-90",
+  "cover-green": "cover-glow-green h-90",
+  "cover-red": "cover-glow-red h-90",
+  "cover-teal": "cover-glow-teal h-90",
+  "cover-violet": "cover-glow-violet h-90",
+  stage: "stage-glow h-80",
+};
+
 interface ScreenLayoutProps {
   hasBottomNav?: boolean;
+  hasMiniPlayer?: boolean;
+  /** 헤더 자리 없이 화면이 프레임 맨 위(상단 안전영역 포함)부터 그린다 */
+  fullBleed?: boolean;
 }
 
-// 모든 화면이 공유하는 라우트 레이아웃 — router.tsx에서 부모 route로 두고 화면들을
-// 자식 route(Outlet)로 넣는다. 화면마다 다른 헤더는 useScreenHeader 훅으로 이 레이아웃에
-// 등록한다. Bottom Nav의 활성 탭도 화면 state가 아니라 현재 라우트에서 파생시킨다.
-// 하단 고정 버튼(Action Area)이 있는 화면은 라우트 handle에 hasBottomNav: false를 지정한다.
+// 모든 화면이 공유하는 라우트 레이아웃 — router.tsx에서 부모 route로 두고 화면들을 자식 route(Outlet)로
+// 넣는다. 화면마다 다른 헤더·위쪽 그라데이션은 useScreenHeader·useScreenBackdrop 훅으로 등록한다.
+// 하단 탭·미니 플레이어 유무는 라우트 handle(hasBottomNav·hasMiniPlayer)로 정한다.
 //
-// 높이는 폰이든 데스크톱이든 뷰포트를 꽉 채운다(h-dvh) — 데스크톱에서 높이를 고정하면 낮은
-// 뷰포트에서 화면 아래가 잘리고 Bottom Nav가 밀려난다. 폭만 데스크톱 뷰포트(sm 이상)에서
-// 480px로 묶는다 — Figma는 402 기준이지만 데스크톱에서 그대로 쓰면 너무 좁다.
-//
-// 세이프에어리어 자리는 앱 셸이 담당하므로 여기서 env(safe-area-inset-*)를 더하지 않는다(중복
-// 여백이 된다). 대신 그 자리를 무슨 색으로 칠할지는 useNativeSafeAreaColors로 앱에 알려준다.
+// 높이는 뷰포트를 꽉 채우고(h-dvh), 폭만 데스크톱(sm 이상)에서 480px로 묶는다.
 // 세이프에어리어는 env(safe-area-inset-*)로 확보한다(index.html의 viewport-fit=cover와 한 쌍).
-function ScreenLayout({ hasBottomNav = true }: ScreenLayoutProps) {
+function ScreenLayout({
+  fullBleed = false,
+  hasBottomNav = true,
+  hasMiniPlayer = false,
+}: ScreenLayoutProps) {
   const [header, setHeader] = useState<ReactNode>(null);
+  const [backdrop, setBackdrop] = useState<ScreenBackdrop | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const bottomNavValue = getBottomNavValueFromPath(location.pathname);
+  const chrome = useMemo(
+    () => ({ hasMiniPlayer, setBackdrop }),
+    [hasMiniPlayer],
+  );
 
   useNativeSafeAreaColors(hasBottomNav);
 
-  // 탭 전환을 View Transitions API로 감싸 Shared Axis(이전 화면은 페이드아웃하며 밀려 나가고
-  // 새 화면이 반대쪽에서 밀려 들어옴) 전환을 건다 — 애니메이션 자체는 index.css에 있다.
-  // 미끄러지는 방향은 CSS가 알 수 없으므로(라우터는 "어느 탭에서 어느 탭으로"를 모른다) 여기서
-  // 탭 순서를 비교해 html의 data-nav-direction에 심어 둔다.
-  // startViewTransition이 없는 브라우저(iOS 18 미만 WKWebView 등)에서는 React Router가 그냥
-  // 즉시 전환한다 — 동작에는 차이가 없고 애니메이션만 빠진다.
+  // 탭 전환을 View Transitions API로 감싸 Shared Axis 전환을 건다 — 애니메이션은 index.css에 있다.
+  // 미끄러지는 방향은 CSS가 알 수 없으므로 탭 순서를 비교해 html의 data-nav-direction에 심는다.
   const handleBottomNavChange = (next: BottomNavValue) => {
-    if (next === bottomNavValue) return;
+    if (
+      next === bottomNavValue &&
+      location.pathname === BOTTOM_NAV_PATHS[next]
+    ) {
+      return;
+    }
     const forward =
       BOTTOM_NAV_ORDER.indexOf(next) > BOTTOM_NAV_ORDER.indexOf(bottomNavValue);
     document.documentElement.dataset.navDirection = forward
@@ -78,26 +101,47 @@ function ScreenLayout({ hasBottomNav = true }: ScreenLayoutProps) {
 
   return (
     <ScreenHeaderContext.Provider value={setHeader}>
-      <div className="view-transition-frame relative flex h-dvh w-full flex-col overflow-hidden bg-background sm:w-120 sm:shadow-2xl">
-        <div className="relative shrink-0 pt-safe-top">{header}</div>
-        {/* 스크롤 처리는 각 화면이 스스로 결정한다. overflow-y-auto가 동작하려면 자식 높이가
-                명확해야 해서, 화면마다 h-full을 직접 챙기지 않아도 되도록 여기서 기본으로 보장한다. */}
-        <div className="relative flex-1 overflow-hidden">
-          <div className="flex h-full flex-col">
-            <Outlet />
-          </div>
-        </div>
-        {/* view-transition-name이 붙은 자손은 조상(프레임)의 스냅샷에서 빠진다 — 그래서
-                아래 한 클래스만으로 화면이 미끄러지는 동안 Bottom Nav는 제자리에 남는다. */}
-        {hasBottomNav && (
-          <div className="view-transition-bottom-nav relative shrink-0">
-            <BottomNav
-              onValueChange={handleBottomNavChange}
-              value={bottomNavValue}
+      <ScreenChromeContext.Provider value={chrome}>
+        <div className="view-transition-frame relative flex h-dvh w-full flex-col overflow-hidden bg-background sm:w-120 sm:shadow-2xl">
+          {backdrop && (
+            <div
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute inset-x-0 top-0",
+                BACKDROP_CLASS[backdrop],
+              )}
             />
+          )}
+          {!fullBleed && (
+            <div className="relative shrink-0 pt-safe-top">{header}</div>
+          )}
+          {/* 스크롤은 각 화면(ScreenBody)이 맡는다. overflow-y-auto가 동작하려면 자식 높이가 명확해야
+              해서 여기서 h-full을 보장한다. */}
+          <div className="relative flex-1 overflow-hidden">
+            <div className="flex h-full flex-col">
+              <Outlet />
+            </div>
+            {hasMiniPlayer && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0">
+                <div className="absolute inset-x-0 bottom-0 bottom-fade h-24" />
+                <div className="pointer-events-auto relative px-2 pb-2">
+                  <MiniPlayer />
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+          {/* view-transition-name이 붙은 자손은 조상(프레임)의 스냅샷에서 빠진다 — 그래서 화면이
+              미끄러지는 동안 Bottom Nav는 제자리에 남는다. */}
+          {hasBottomNav && (
+            <div className="view-transition-bottom-nav relative shrink-0">
+              <BottomNav
+                onValueChange={handleBottomNavChange}
+                value={bottomNavValue}
+              />
+            </div>
+          )}
+        </div>
+      </ScreenChromeContext.Provider>
     </ScreenHeaderContext.Provider>
   );
 }

@@ -8,19 +8,22 @@ import {
 } from "@wanteddev/wds";
 import type { ReactNode } from "react";
 
-// 아래에서 올라오는 시트(멤버 관리 · 지원하기 · 팀 초대 …) — WDS `Modal`의 bottom 변형.
-// 데스크톱 컬럼(480px)에서도 WDS가 시트 폭을 480px로 묶어 줘서 앱 프레임과 폭이 맞는다.
-// 하단 버튼이 필요하면 footer에 WDS `ActionArea`를 넘긴다(Modal이 스크롤·그라데이션을 맞춰 준다).
+// 아래에서 올라오는 시트(곡 추가 · 파트 선택 · 구간 피드백 · 지원하기 …) — WDS Modal bottom.
+// 위쪽 손잡이(Figma "Sheet/Handle" 538:22436)는 WDS handle로 그리고, 제목은 왼쪽 큰 글자(display)다.
+// 닫기 버튼은 Figma에서 구간 피드백처럼 내용이 긴 시트에만 있어 closable로 켠다.
+// 하단 버튼이 필요하면 footer에 WDS ActionArea(BottomActionArea의 inSheet)를 넘긴다.
 interface BottomSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title?: ReactNode;
+  closable?: boolean;
   children: ReactNode;
   footer?: ReactNode;
 }
 
 function BottomSheet({
   children,
+  closable = false,
   footer,
   onOpenChange,
   open,
@@ -28,9 +31,18 @@ function BottomSheet({
 }: BottomSheetProps) {
   return (
     <Modal onOpenChange={onOpenChange} open={open}>
-      <ModalContainer variant="bottom">
+      <ModalContainer handle variant="bottom">
         {title !== undefined && (
-          <ModalNavigation trailingContent={<ModalClose />} variant="normal">
+          <ModalNavigation
+            sx={{
+              "& [data-role='navigation-title'] h2": {
+                fontSize: "1.25rem",
+                lineHeight: "1.75rem",
+              },
+            }}
+            trailingContent={closable ? <ModalClose /> : undefined}
+            variant="display"
+          >
             {title}
           </ModalNavigation>
         )}

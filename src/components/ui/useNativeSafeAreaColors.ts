@@ -13,7 +13,7 @@ function readCssVariable(name: string): string {
 // 화면과 같은 색으로 칠해 경계선을 없앤다. 앱은 웹의 DOM을 볼 수 없으므로(별도 저장소·별도
 // 배포, WebView 안은 픽셀만 보인다) 웹이 자기 색을 알려주지 않으면 알 방법이 없다.
 //
-// 모여락은 화면마다 캔버스 색이 바뀌지 않는 다크(네온) 단일 테마라(#0b0b0d 고정), Stream처럼
+// 모여락은 화면마다 캔버스 색이 바뀌지 않는 다크 단일 테마라(bg/base 고정), Stream처럼
 // 화면별 background variant를 받을 필요가 없다 — 상단은 항상 캔버스, 하단은 Bottom Nav가
 // 있으면 그 표면색(elevated), 없으면 캔버스 색 그대로다.
 export function useNativeSafeAreaColors(hasBottomNav: boolean) {
