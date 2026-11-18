@@ -1,11 +1,13 @@
 import { Checkbox, Typography } from "@wanteddev/wds";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import BottomActionArea from "@/components/ui/BottomActionArea";
+import ScreenBody from "@/components/ui/ScreenBody";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import TextInputField from "@/components/ui/TextInputField";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import StepHeading from "@/features/onboarding/components/StepHeading";
 
 const PASSWORD_RULE = "8~64자, 영문·숫자·특수문자를 각각 1자 이상";
 
@@ -24,10 +26,11 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// Figma: 온보딩/07 이메일 회원가입 (nodeId 142:19196).
+// 이메일 회원가입(/login/email-signup) — 08 로그인의 "회원가입" 링크에서 들어온다. Figma 화면은 없어서
+// 온보딩 단계 화면(22)과 같은 모양으로 둔다.
 // 서버 POST /v1/auth/signup {email, password, name, privacyAgreed}. privacyAgreed=true가 아니면 가입이
-// 안 되므로 Figma에 없던 개인정보 처리방침 동의를 하단 버튼 위에 붙였다. 이름은 서버가 임시 닉네임으로
-// 쓰기 때문에 다음 닉네임 단계의 기본값으로 넘긴다.
+// 안 되므로 개인정보 처리방침 동의를 하단 버튼 위에 붙였다. 이름은 서버가 임시 닉네임으로 쓰기 때문에
+// 다음 닉네임 단계의 기본값으로 넘긴다.
 function OnboardingSignupScreen() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -36,7 +39,7 @@ function OnboardingSignupScreen() {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
 
-  useScreenHeader(<ScreenHeader />);
+  useScreenHeader(useMemo(() => <ScreenHeader />, []));
 
   // 입력을 시작한 뒤에만 에러를 보여 준다 — 빈 칸부터 빨간 문구가 뜨지 않게.
   const emailError =
@@ -64,15 +67,14 @@ function OnboardingSignupScreen() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col bg-background">
-      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-6">
-        <Typography
-          color="semantic.label.strong"
-          variant="title3"
-          weight="bold"
-        >
-          이메일로 가입할게요
-        </Typography>
+    <>
+      <ScreenBody className="flex flex-col gap-6 px-5 pt-2">
+        <div className="pb-2">
+          <StepHeading
+            description="가입한 뒤 프로필을 이어서 정해요"
+            title="이메일로 가입"
+          />
+        </div>
         <TextInputField
           autoComplete="name"
           label="이름"
@@ -110,7 +112,7 @@ function OnboardingSignupScreen() {
           type="password"
           value={passwordConfirm}
         />
-      </div>
+      </ScreenBody>
       <BottomActionArea
         disabled={!canSubmit}
         extraContent={
@@ -124,19 +126,15 @@ function OnboardingSignupScreen() {
               onCheckedChange={setPrivacyAgreed}
               size="small"
             />
-            <Typography
-              color="semantic.label.normal"
-              variant="label1"
-              weight="regular"
-            >
+            <Typography color="semantic.label.normal" variant="label1">
               [필수] 개인정보 처리방침 동의
             </Typography>
           </label>
         }
-        label="가입하기"
+        label="가입"
         onClick={signup}
       />
-    </div>
+    </>
   );
 }
 

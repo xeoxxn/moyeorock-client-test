@@ -1,10 +1,12 @@
-import { Checkbox, Divider, Typography } from "@wanteddev/wds";
-import { useState } from "react";
+import { Checkbox, Typography } from "@wanteddev/wds";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import BottomActionArea from "@/components/ui/BottomActionArea";
+import ScreenBody from "@/components/ui/ScreenBody";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import StepHeading from "@/features/onboarding/components/StepHeading";
 
 interface TermsLocationState {
   kakaoNickname?: string;
@@ -52,7 +54,7 @@ function OnboardingTermsScreen() {
     ?.kakaoNickname;
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
 
-  useScreenHeader(<ScreenHeader />);
+  useScreenHeader(useMemo(() => <ScreenHeader />, []));
 
   // 가입이 끝나면 약관 화면으로 되돌아오지 않게 replace. 카카오 닉네임은 닉네임 단계의 기본값으로 넘긴다.
   const signup = () => {
@@ -63,25 +65,13 @@ function OnboardingTermsScreen() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col bg-background">
-      <div className="scrollbar-hidden flex flex-1 flex-col gap-8 overflow-y-auto px-5 pt-2">
-        <div className="flex flex-col gap-2">
-          <Typography
-            color="semantic.label.strong"
-            variant="title3"
-            weight="bold"
-          >
-            {kakaoNickname ? `${kakaoNickname}님, 반가워요!` : "반가워요!"}
-          </Typography>
-          <Typography
-            color="semantic.label.assistive"
-            variant="label1"
-            weight="regular"
-          >
-            모여락을 시작하려면 약관에 동의해 주세요
-          </Typography>
-        </div>
-        <div className="flex flex-col gap-4 rounded-2xl border border-line-solid bg-surface p-4">
+    <>
+      <ScreenBody className="flex flex-col gap-8 px-5 pt-2">
+        <StepHeading
+          description="모여락을 시작하려면 약관에 동의해 주세요"
+          title={kakaoNickname ? `${kakaoNickname}님, 반가워요` : "반가워요"}
+        />
+        <div className="flex flex-col gap-5 rounded-xl bg-surface p-4">
           <AgreementRow
             checked={privacyAgreed}
             id="terms-all"
@@ -89,7 +79,6 @@ function OnboardingTermsScreen() {
             onCheckedChange={setPrivacyAgreed}
             strong
           />
-          <Divider />
           <AgreementRow
             checked={privacyAgreed}
             id="terms-privacy"
@@ -97,13 +86,13 @@ function OnboardingTermsScreen() {
             onCheckedChange={setPrivacyAgreed}
           />
         </div>
-      </div>
+      </ScreenBody>
       <BottomActionArea
         disabled={!privacyAgreed}
-        label="동의하고 시작하기"
+        label="다음"
         onClick={signup}
       />
-    </div>
+    </>
   );
 }
 
