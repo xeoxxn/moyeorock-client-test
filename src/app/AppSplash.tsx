@@ -26,8 +26,11 @@ import { cn } from "@/lib/cn";
 // - 이미 로그인했으면: 로고째 페이드아웃하고 열려던 화면(기본 홈)을 그대로 보여 준다.
 // 스플래시 뒤에는 처음부터 갈 화면을 깔아 둬서, 걷히는 순간 그 화면이 이미 그려져 있다.
 
-/** 막대 웨이브가 끝나는 때 — 마지막 막대가 0.66초에 시작해 0.8초 움직인다 */
-const WAVE_END_MS = 1500;
+/**
+ * 로그인 자리로 넘어가기 시작하는 때(Figma 00의 AFTER_TIMEOUT 2.0초) — 막대 웨이브는 마지막 막대가
+ * 0.66초에 시작해 0.8초 움직여 1.5초쯤 끝나고, 0.5초 쉬었다가 넘어간다.
+ */
+const HANDOFF_START_MS = 2000;
 /** 로그인 로고 자리로 옮겨 가거나 페이드아웃하는 시간(duration-800과 같아야 한다) */
 const HANDOFF_MS = 800;
 /** 동작 줄이기 설정이면 웨이브·전환 없이 잠깐만 보여 준다 */
@@ -99,7 +102,7 @@ function AppSplash() {
         });
         setIntroPhase("toLogin");
       },
-      reduced ? REDUCED_HOLD_MS : WAVE_END_MS,
+      reduced ? REDUCED_HOLD_MS : HANDOFF_START_MS,
     );
     return () => window.clearTimeout(timer);
   }, [entryPath, navigate, phase]);

@@ -24,6 +24,24 @@ interface PlayerControlsProps {
 
 const VOLUME_MAX = 100;
 
+// Figma Volume(418:12826)은 주홍이 아니라 무채색이다 — 남은 부분 bg/press, 지나온 부분 text/secondary,
+// 손잡이 text/primary. WDS Slider는 primary(주홍)로 칠하므로 &&로 우선순위를 올려 덮는다.
+const volumeSliderSx = {
+  "&& [data-role='slider-progress-range']": {
+    backgroundColor: "var(--color-press)",
+  },
+  "&& [data-role='slider-progress']": {
+    backgroundColor: "var(--color-label-alternative)",
+  },
+  "&& [data-role='slider-thumb']": {
+    backgroundColor: "var(--color-label-strong)",
+    boxShadow: "none",
+  },
+  "&& [data-role='slider-thumb-interaction']": {
+    backgroundColor: "var(--color-label-strong)",
+  },
+};
+
 function PlayerControls({
   hasNext,
   hasPrevious,
@@ -89,6 +107,7 @@ function PlayerControls({
             max={VOLUME_MAX}
             min={0}
             onValueChange={([next]) => onVolumeChange(next)}
+            sx={volumeSliderSx}
             value={[volume]}
           />
         </div>

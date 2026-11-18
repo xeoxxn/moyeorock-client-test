@@ -34,9 +34,15 @@ const dimLinkSx = {
   color: "color-mix(in srgb, var(--color-static-white) 75%, transparent)",
 };
 
-/** 스플래시가 걷힐 때 같이 나타나는 것들(사진·스크림·부제·버튼) */
+/** 스플래시가 걷힐 때 같이 나타나는 것들(사진·스크림·버튼) */
 const INTRO_FADE =
   "transition-opacity duration-800 ease-in-out motion-reduce:transition-none";
+/**
+ * 부제는 전환 후반부(0.4초 뒤)부터 나타난다 — 처음부터 나타나면 로고·워드마크가 위로 올라오는 동안
+ * 그 아래를 지나가며 잠깐 겹친다.
+ */
+const INTRO_FADE_LATE =
+  "transition-opacity delay-400 duration-400 ease-in-out motion-reduce:transition-none motion-reduce:delay-0";
 
 function OnboardingLoginScreen() {
   const navigate = useNavigate();
@@ -83,7 +89,7 @@ function OnboardingLoginScreen() {
           as="p"
           className={cn(
             "mt-9 whitespace-pre-line text-center",
-            INTRO_FADE,
+            INTRO_FADE_LATE,
             contentHidden && "opacity-0",
           )}
           color="semantic.static.white"
