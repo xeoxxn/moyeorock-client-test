@@ -9,6 +9,7 @@ import ScreenHeader from "@/components/ui/ScreenHeader";
 import SectionHeader from "@/components/ui/SectionHeader";
 import { useAppAlert } from "@/components/ui/useAppAlert";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import { clearSession } from "@/lib/auth/session";
 import { getMe, getMyGroups, getMyTeams } from "@/mocks/selectors";
 
 // 계정(/mine/account) — Figma 07 마이의 "계정" 메뉴·설정 아이콘에서 들어온다. Figma 화면은 없어서 예전
@@ -57,7 +58,10 @@ function MineAccountScreen() {
   };
 
   // 서버에 로그아웃 API가 없다 — 앱이 들고 있는 토큰만 지우고 로그인 화면으로 보낸다.
-  const logout = () => navigate("/login", { replace: true });
+  const logout = () => {
+    clearSession();
+    navigate("/login", { replace: true });
+  };
 
   const withdraw = async () => {
     const blockedMessage = getWithdrawBlockedMessage();
@@ -144,7 +148,10 @@ function MineAccountScreen() {
       <ConfirmSheet
         confirmLabel="탈퇴"
         description="소속 모임·팀과 활동 기록이 모두 삭제되고 되돌릴 수 없어요."
-        onConfirm={() => navigate("/login", { replace: true })}
+        onConfirm={() => {
+          clearSession();
+          navigate("/login", { replace: true });
+        }}
         onOpenChange={closeConfirm}
         open={confirm === "withdraw"}
         title="정말 탈퇴할까요?"

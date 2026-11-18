@@ -57,6 +57,8 @@ interface ScreenLayoutProps {
   hasMiniPlayer?: boolean;
   /** 헤더 자리 없이 화면이 프레임 맨 위(상단 안전영역 포함)부터 그린다 */
   fullBleed?: boolean;
+  /** 프레임 전체를 덮는 층(앱 첫 진입 스플래시) — 데스크톱에서도 앱 컬럼 안만 덮는다 */
+  overlay?: ReactNode;
 }
 
 // 모든 화면이 공유하는 라우트 레이아웃 — router.tsx에서 부모 route로 두고 화면들을 자식 route(Outlet)로
@@ -69,6 +71,7 @@ function ScreenLayout({
   fullBleed = false,
   hasBottomNav = true,
   hasMiniPlayer = false,
+  overlay,
 }: ScreenLayoutProps) {
   const [header, setHeader] = useState<ReactNode>(null);
   const [backdrop, setBackdrop] = useState<ScreenBackdrop | null>(null);
@@ -140,6 +143,7 @@ function ScreenLayout({
               />
             </div>
           )}
+          {overlay}
         </div>
       </ScreenChromeContext.Provider>
     </ScreenHeaderContext.Provider>

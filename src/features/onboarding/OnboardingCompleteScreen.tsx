@@ -1,12 +1,13 @@
 import { Typography } from "@wanteddev/wds";
 import { IconCheck } from "@wanteddev/wds-icon";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import BottomActionArea from "@/components/ui/BottomActionArea";
 import ScreenBody from "@/components/ui/ScreenBody";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import { saveSession } from "@/lib/auth/session";
 import { getMe } from "@/mocks/selectors";
 
 // Figma 09 가입 완료(421:13717) — 오른쪽 닫기만 있는 헤더 + 가운데 주홍 체크 + "가입했어요" + 시작하기.
@@ -15,6 +16,11 @@ import { getMe } from "@/mocks/selectors";
 function OnboardingCompleteScreen() {
   const navigate = useNavigate();
   const me = getMe();
+
+  // 가입·온보딩을 마쳤으니 로그인한 상태로 둔다 — 다음 실행부턴 스플래시가 바로 홈으로 간다.
+  useEffect(() => {
+    saveSession();
+  }, []);
 
   useScreenHeader(
     useMemo(
