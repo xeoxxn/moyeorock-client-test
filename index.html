@@ -11,7 +11,8 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title>moyeorock</title>
-    <!-- 모여락은 다크(네온) 테마 전용 앱이라 라이트 모드가 없다. WDS ThemeProvider(next-themes 기반)는
+    <meta name="theme-color" content="#101012" />
+    <!-- 모여락은 다크 테마 전용 앱이라 라이트 모드가 없다. WDS ThemeProvider(next-themes 기반)는
          명시적으로 저장된 테마가 없으면 OS 설정(prefers-color-scheme)을 따라가므로, 리액트가
          마운트되기 전에 theme을 "dark"로 고정해 둬야 라이트 OS에서도 깜빡임 없이 항상 다크로 뜬다. -->
     <script>
@@ -21,6 +22,13 @@
       document.documentElement.dataset.theme = "dark";
     </script>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <!-- Archivo Black — 숫자(시간·날짜·통계)·커버 파트 글자용 브랜드 글꼴(Figma Foundation "Number") -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap"
+    />
     <link
       rel="stylesheet"
       as="style"
