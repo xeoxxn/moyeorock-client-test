@@ -1,8 +1,10 @@
-import { Chip, Typography, useToast } from "@wanteddev/wds";
-import { useState } from "react";
+import { useToast } from "@wanteddev/wds";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import BottomActionArea from "@/components/ui/BottomActionArea";
+import ChipGrid from "@/components/ui/ChipGrid";
+import ScreenBody from "@/components/ui/ScreenBody";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import SelectField from "@/components/ui/SelectField";
 import TextInputField from "@/components/ui/TextInputField";
@@ -16,10 +18,11 @@ import {
   REGION_OPTIONS,
 } from "@/lib/domain/labels";
 import type { Genre, Instrument, Region } from "@/lib/domain/types";
-import { getMe } from "@/mocks/selectors";
+import { getMe, getMyTeams } from "@/mocks/selectors";
 
 // 서버 TeamCreateRequest 제한
 const NAME_MAX_LENGTH = 50;
+const DESCRIPTION_MAX_LENGTH = 500;
 const GENRE_MAX_COUNT = 5;
 
 const REGION_SELECT_OPTIONS = REGION_OPTIONS.map((region) => ({
@@ -27,10 +30,9 @@ const REGION_SELECT_OPTIONS = REGION_OPTIONS.map((region) => ({
   value: region,
 }));
 
-// Figma: 팀/09 독립 팀 만들기 (nodeId 101:23564). 서버 POST /teams
-// {name(≤50), description, region, genres(≤5), instrument(내 세션, 필수)} — 만든 사람이 팀장이 된다.
-// Figma의 "함께할 세션 모집" 칸은 서버 요청에 없어서 뺐다. 모집은 팀을 만든 뒤 게시판 공고나
-// 팀원 찾기로 한다.
+// 독립 팀 만들기 — 서버 POST /teams {name(≤50), description, region, genres(≤5), instrument(내 세션,
+// 필수)}. 만든 사람이 팀장이 된다. Figma 21·24 폼 모양(라벨 + 입력, 같은 폭 3열 칩, 하단 버튼).
+// 만들면 완료 화면 없이 새 팀으로 replace 이동 + 토스트. 팀원은 만든 뒤 멤버 탭에서 초대한다.
 function TeamNewIndependentScreen() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -45,7 +47,7 @@ function TeamNewIndependentScreen() {
     me.instruments[0]?.instrument ?? null,
   );
 
-  useScreenHeader(<ScreenHeader title="독립 팀 만들기" />);
+  useScreenHeader(useMemo(() => <ScreenHeader title="독립 팀 만들기" />, []));
 
   const toggleGenre = (genre: Genre) => {
     if (genres.includes(genre)) {
@@ -66,96 +68,65 @@ function TeamNewIndependentScreen() {
 
   const create = () => {
     toast({ content: `${name.trim()} 팀을 만들었어요`, variant: "positive" });
-    // 목업에는 새 팀을 저장할 곳이 없어서, 만들어진 팀 대신 기존 독립 팀(나이트 드라이브) 홈을 연다.
-    // 서버가 붙으면 POST /teams 응답의 id로 간다. 폼으로 되돌아오지 않게 replace.
-    navigate("/team/2", { replace: true });
+    // 목업에는 새 팀을 저장할 곳이 없어 내가 팀장인 독립 팀을 대신 연다. 서버가 붙으면 POST /teams
+    // 응답의 id로 간다. 폼으로 되돌아오지 않게 replace.
+    const created = getMyTeams().find(
+      (team) => team.performanceId === null && team.myRole === "LEADER",
+    );
+    navigate(created ? `/team/${created.id}` : "/crew?tab=team", {
+      replace: true,
+    });
   };
 
   return (
     <>
-      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-8">
-        <Typography
-          as="p"
-          color="semantic.label.strong"
-          variant="headline1"
-          weight="bold"
-        >
-          모임 가입 없이 팀을 만들고
-          <br />
-          합주를 시작할 수 있어요
-        </Typography>
-
-        <TextInputField
-          label="팀 이름"
-          maxLength={NAME_MAX_LENGTH}
-          onChange={setName}
-          placeholder="팀 이름 입력"
-          value={name}
-        />
-        <TextInputField
-          label="팀 소개"
-          maxLength={500}
-          multiline
-          onChange={setDescription}
-          placeholder="어떤 음악을 연주하나요?"
-          value={description}
-        />
-        <SelectField
-          label="활동 지역"
-          onChange={setRegion}
-          options={REGION_SELECT_OPTIONS}
-          value={region}
-        />
-
-        <div className="flex flex-col gap-3">
-          <Typography
-            color="semantic.label.alternative"
-            variant="label2"
-            weight="medium"
-          >
-            장르 (최대 {GENRE_MAX_COUNT}개)
-          </Typography>
-          <div className="flex flex-wrap gap-2">
-            {GENRE_OPTIONS.map((genre) => (
-              <Chip
-                active={genres.includes(genre)}
-                key={genre}
-                onClick={() => toggleGenre(genre)}
-                size="large"
-                variant="outlined"
-              >
-                {GENRE_LABEL[genre]}
-              </Chip>
-            ))}
-          </div>
+      <ScreenBody>
+        <div className="flex flex-col gap-6 px-5 pt-2">
+          <TextInputField
+            label="팀 이름"
+            maxLength={NAME_MAX_LENGTH}
+            onChange={setName}
+            placeholder="팀 이름"
+            value={name}
+          />
+          <TextInputField
+            label="소개"
+            maxLength={DESCRIPTION_MAX_LENGTH}
+            multiline
+            onChange={setDescription}
+            placeholder="어떤 음악을 연주하나요?"
+            value={description}
+          />
+          <SelectField
+            label="활동 지역"
+            onChange={setRegion}
+            options={REGION_SELECT_OPTIONS}
+            value={region}
+          />
+          <ChipGrid
+            isSelected={(genre) => genres.includes(genre)}
+            label="장르"
+            message={`최대 ${GENRE_MAX_COUNT}개`}
+            onToggle={toggleGenre}
+            options={GENRE_OPTIONS.map((value) => ({
+              label: GENRE_LABEL[value],
+              value,
+            }))}
+          />
+          <ChipGrid
+            isSelected={(option) => instrument === option}
+            label="내 세션"
+            onToggle={setInstrument}
+            options={INSTRUMENT_OPTIONS.map((value) => ({
+              label: INSTRUMENT_LABEL[value],
+              value,
+            }))}
+          />
         </div>
-
-        <div className="flex flex-col gap-3">
-          <Typography
-            color="semantic.label.alternative"
-            variant="label2"
-            weight="medium"
-          >
-            내 연주 세션
-          </Typography>
-          <div className="flex flex-wrap gap-2">
-            {INSTRUMENT_OPTIONS.map((option) => (
-              <Chip
-                active={instrument === option}
-                key={option}
-                onClick={() => setInstrument(option)}
-                size="large"
-                variant="outlined"
-              >
-                {INSTRUMENT_LABEL[option]}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      </div>
+      </ScreenBody>
 
       <BottomActionArea
-        caption="내가 팀장이 되어 시작해요. 팀원은 만든 뒤 초대하거나 공고로 모아요."
+        caption="내가 팀장이 돼요. 팀원은 만든 뒤 초대해요."
         disabled={!canSubmit}
         label="만들기"
         onClick={create}
