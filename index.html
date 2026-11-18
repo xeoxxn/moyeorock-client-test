@@ -2,7 +2,19 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
+    <!-- 앱 아이콘: 주홍(#C64537) 바탕 + 검은 세로형 로고(피크 + moyeorock). 원본은 Figma "Brand — 앱 아이콘"(574:23689).
+         홈 화면용 PNG는 모서리를 OS가 깎으니 꽉 찬 정사각형으로 두고, 로고는 마스커블 안전 영역(지름 80%) 안에 있다.
+         브라우저 탭 파비콘은 글자가 안 읽히는 크기라 피크 심볼만 쓴다. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- 홈 화면에 추가하면 주소창 없이 앱처럼 열린다. 상태 표시줄은 투명하게 두고
+         viewport-fit=cover + safe-area 유틸로 노치를 피한다. -->
+    <meta name="apple-mobile-web-app-title" content="모여락" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <!-- viewport-fit=cover: 페이지를 노치·홈 인디케이터 밑까지 펼친다. 이게 없으면 브라우저가
          알아서 안전 영역 안으로 잘라 넣고, 그 대신 env(safe-area-inset-*)이 항상 0이 된다.
          펼친 만큼 피하는 건 우리 책임이 되며 index.css의 safe-area 유틸이 담당한다. -->
