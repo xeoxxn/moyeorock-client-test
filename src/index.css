@@ -339,3 +339,209 @@
     animation-duration: 1ms;
   }
 }
+
+/* ── 로딩 애니메이션(공통 컴포넌트 보드 589:24247 · 589:24272 · 00 스플래시 604:26169) ───────────
+   LoaderLogo: 피크 안 막대 3개가 왼쪽부터 0.2초 간격으로 늘었다 돌아온다(ease-out-back으로 살짝
+   튕김, 2.4초 반복). 목표 배율 1.5·1.2·1.4는 막대가 피크 밖으로 나가지 않게 맞춘 값이라 바꾸지 않는다.
+   스플래시는 같은 배율로 0.3초부터 0.18초 간격, 한 번만 움직인다. 막대는 SVG <rect>라 자기 상자
+   가운데(fill-box)를 기준으로 늘린다. 동작 줄이기 설정이면 모두 멈춘다. */
+@keyframes loader-logo-bar {
+  0% {
+    transform: scaleY(1);
+    animation-timing-function: cubic-bezier(0.45, 1.45, 0.8, 1);
+  }
+  16.667% {
+    transform: scaleY(var(--loader-bar-peak));
+    animation-timing-function: cubic-bezier(0.45, 1.45, 0.8, 1);
+  }
+  37.5%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes splash-logo-bar {
+  0% {
+    transform: scaleY(1);
+    animation-timing-function: cubic-bezier(0.45, 1.45, 0.8, 1);
+  }
+  43.75% {
+    transform: scaleY(var(--loader-bar-peak));
+    animation-timing-function: cubic-bezier(0.45, 1.45, 0.8, 1);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@utility loader-logo-bars {
+  & > rect {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: loader-logo-bar 2.4s infinite both;
+  }
+  & > rect:nth-child(1) {
+    --loader-bar-peak: 1.5;
+    animation-delay: 0.2s;
+  }
+  & > rect:nth-child(2) {
+    --loader-bar-peak: 1.2;
+    animation-delay: 0.4s;
+  }
+  & > rect:nth-child(3) {
+    --loader-bar-peak: 1.4;
+    animation-delay: 0.6s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    & > rect {
+      animation: none;
+    }
+  }
+}
+
+@utility splash-logo-bars {
+  & > rect {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: splash-logo-bar 0.8s both;
+  }
+  & > rect:nth-child(1) {
+    --loader-bar-peak: 1.5;
+    animation-delay: 0.3s;
+  }
+  & > rect:nth-child(2) {
+    --loader-bar-peak: 1.2;
+    animation-delay: 0.48s;
+  }
+  & > rect:nth-child(3) {
+    --loader-bar-peak: 1.4;
+    animation-delay: 0.66s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    & > rect {
+      animation: none;
+    }
+  }
+}
+
+/* LoaderWave: 녹음 파형처럼 막대 5개가 차례로 늘었다 줄었다 한다(2.4초 반복, 버튼·목록용). */
+@keyframes loader-wave-1 {
+  0% {
+    transform: scaleY(0.35);
+  }
+  12.5% {
+    transform: scaleY(1);
+  }
+  25% {
+    transform: scaleY(0.5);
+  }
+  37.5% {
+    transform: scaleY(0.8);
+  }
+  50%,
+  100% {
+    transform: scaleY(0.35);
+  }
+}
+
+@keyframes loader-wave-2 {
+  0% {
+    transform: scaleY(0.7);
+  }
+  12.5% {
+    transform: scaleY(0.4);
+  }
+  25% {
+    transform: scaleY(1);
+  }
+  37.5% {
+    transform: scaleY(0.45);
+  }
+  50%,
+  100% {
+    transform: scaleY(0.7);
+  }
+}
+
+@keyframes loader-wave-3 {
+  0% {
+    transform: scaleY(1);
+  }
+  12.5% {
+    transform: scaleY(0.55);
+  }
+  25% {
+    transform: scaleY(0.4);
+  }
+  37.5%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes loader-wave-4 {
+  0% {
+    transform: scaleY(0.5);
+  }
+  12.5% {
+    transform: scaleY(0.9);
+  }
+  25% {
+    transform: scaleY(0.6);
+  }
+  37.5% {
+    transform: scaleY(0.35);
+  }
+  50%,
+  100% {
+    transform: scaleY(0.5);
+  }
+}
+
+@keyframes loader-wave-5 {
+  0% {
+    transform: scaleY(0.8);
+  }
+  12.5% {
+    transform: scaleY(0.35);
+  }
+  25% {
+    transform: scaleY(0.85);
+  }
+  37.5% {
+    transform: scaleY(0.6);
+  }
+  50%,
+  100% {
+    transform: scaleY(0.8);
+  }
+}
+
+@utility loader-wave {
+  & > span {
+    transform-origin: center;
+    animation-duration: 2.4s;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+  }
+  & > span:nth-child(1) {
+    animation-name: loader-wave-1;
+  }
+  & > span:nth-child(2) {
+    animation-name: loader-wave-2;
+  }
+  & > span:nth-child(3) {
+    animation-name: loader-wave-3;
+  }
+  & > span:nth-child(4) {
+    animation-name: loader-wave-4;
+  }
+  & > span:nth-child(5) {
+    animation-name: loader-wave-5;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    & > span {
+      animation: none;
+    }
+  }
+}

@@ -1,10 +1,20 @@
+import type { Ref } from "react";
 import logoUrl from "@/assets/brand/logo.svg";
-import logoStackedUrl from "@/assets/brand/logo-stacked.svg";
+
+import {
+  PICK_BAR_RADIUS,
+  PICK_BAR_WIDTH,
+  PICK_BARS,
+  PICK_OUTLINE_PATH,
+  STACKED_LOGO_VIEWBOX,
+  STACKED_SYMBOL_TRANSFORM,
+  STACKED_WORDMARK_PATHS,
+} from "@/components/music/brandPaths";
 import { cn } from "@/lib/cn";
 
 // Figma "Brand · System"(445:17595) — 모여락 로고. 기본 글꼴로 친 이름 대신 벡터 로고를 쓴다.
 // - BrandLogo(446:17602): 가로형(주홍 심볼 + 흰 소문자 워드마크). 홈 헤더에서 높이 24px.
-// - BrandLogoStacked(452:17877): 세로형. 시작 화면처럼 로고가 주인공인 곳.
+// - BrandLogoStacked(452:17877): 세로형. 스플래시·시작 화면처럼 로고가 주인공인 곳.
 // - BrandSymbol(446:17599): 기타 피크에 녹음 막대 3줄을 뚫은 심볼. 오늘 합주 카드 워터마크 등.
 
 export function BrandLogo({ className }: { className?: string }) {
@@ -13,13 +23,59 @@ export function BrandLogo({ className }: { className?: string }) {
   );
 }
 
-export function BrandLogoStacked({ className }: { className?: string }) {
+interface BrandLogoStackedProps {
+  className?: string;
+  /** 피크 색(기본 주홍). 스플래시에선 검정에서 주홍으로 바뀐다. */
+  pickClassName?: string;
+  /** 피크 안 막대 색(기본 진한 bg/base) */
+  barClassName?: string;
+  /** 워드마크 색(기본 흰색) */
+  wordmarkClassName?: string;
+  /** 막대 움직임(스플래시의 splash-logo-bars) — 막대 <rect>를 담은 묶음에 붙는다 */
+  barsMotionClassName?: string;
+  ref?: Ref<SVGSVGElement>;
+}
+
+// 세로형 로고는 피크·막대·워드마크를 따로 칠할 수 있게 인라인 SVG로 그린다 — 스플래시(00)에서
+// 로그인(08) 로고 자리로 옮겨 가며 색이 바뀌고, 막대만 따로 늘었다 줄어든다.
+export function BrandLogoStacked({
+  barClassName = "fill-background",
+  barsMotionClassName,
+  className,
+  pickClassName = "fill-accent",
+  ref,
+  wordmarkClassName = "fill-label-strong",
+}: BrandLogoStackedProps) {
   return (
-    <img
-      alt="moyeorock"
+    <svg
+      aria-label="moyeorock"
       className={cn("h-auto", className)}
-      src={logoStackedUrl}
-    />
+      fill="none"
+      ref={ref}
+      role="img"
+      viewBox={STACKED_LOGO_VIEWBOX}
+    >
+      <g transform={STACKED_SYMBOL_TRANSFORM}>
+        <path className={pickClassName} d={PICK_OUTLINE_PATH} />
+        <g className={cn(barClassName, barsMotionClassName)}>
+          {PICK_BARS.map((bar) => (
+            <rect
+              height={bar.height}
+              key={bar.x}
+              rx={PICK_BAR_RADIUS}
+              width={PICK_BAR_WIDTH}
+              x={bar.x}
+              y={bar.y}
+            />
+          ))}
+        </g>
+      </g>
+      <g className={wordmarkClassName}>
+        {STACKED_WORDMARK_PATHS.map((path) => (
+          <path d={path} key={path} />
+        ))}
+      </g>
+    </svg>
   );
 }
 

@@ -145,6 +145,18 @@ export interface Song extends SongSummary {
   difficulty: { part: Instrument; level: Level }[];
 }
 
+/**
+ * TeamSongRecommendationResponse.songs[] — 팀 곡 추천(AI, 서버 §12). 점수 높은 순 최대 10곡.
+ * reasons는 백엔드가 만든 문장 그대로 보여 준다("팀 장르 일치: 팝" · "보컬 실력 충족" · "드럼 난이도 초과").
+ * selectedByOtherTeam은 같은 공연의 다른 팀이 이미 고른 곡인지 — 독립 팀이면 항상 false.
+ */
+export interface TeamSongRecommendation {
+  song: Song;
+  score: number;
+  reasons: string[];
+  selectedByOtherTeam: boolean;
+}
+
 /** TeamDetailResponse. performanceId가 있으면 공연 팀, null이면 독립 팀이다. */
 export interface Team {
   id: number;
