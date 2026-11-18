@@ -25,50 +25,53 @@ function PartSelectSheet({
 }: PartSelectSheetProps) {
   return (
     <BottomSheet onOpenChange={onOpenChange} open={open} title="내 파트">
-      {/* 시트 안 여백(20px)과 행 여백(fillWidth 20px)이 겹치지 않게 행을 시트 끝까지 편다. */}
-      <List className="-mx-5">
-        {INSTRUMENT_OPTIONS.map((part) => {
-          const selected = part === value;
-          return (
-            <ListCell
-              fillWidth
-              key={part}
-              onClick={rowClick(() => {
-                onSelect(part);
-                onOpenChange(false);
-              })}
-              sx={{ paddingBlock: "0.75rem" }}
-              trailingContent={
-                selected ? (
-                  <IconCheck className="size-5 text-label-strong" />
-                ) : undefined
-              }
-              verticalPadding="none"
-            >
-              <span className="flex items-center gap-1.5">
-                <Typography
-                  as="span"
-                  color="semantic.label.strong"
-                  variant="body1"
-                  weight={selected ? "bold" : "regular"}
-                >
-                  {INSTRUMENT_LABEL[part]}
-                </Typography>
-                {myParts.includes(part) && (
+      {/* 시트 안 여백(20px)과 행 여백(fillWidth 20px)이 겹치지 않게 행을 시트 끝까지 편다. WDS List의
+          margin이 Tailwind 클래스를 이겨서 당기는 건 감싼 div가 맡는다. */}
+      <div className="-mx-5">
+        <List>
+          {INSTRUMENT_OPTIONS.map((part) => {
+            const selected = part === value;
+            return (
+              <ListCell
+                fillWidth
+                key={part}
+                onClick={rowClick(() => {
+                  onSelect(part);
+                  onOpenChange(false);
+                })}
+                sx={{ paddingBlock: "0.75rem" }}
+                trailingContent={
+                  selected ? (
+                    <IconCheck className="size-5 text-label-strong" />
+                  ) : undefined
+                }
+                verticalPadding="none"
+              >
+                <span className="flex items-center gap-1.5">
                   <Typography
                     as="span"
-                    color="semantic.label.assistive"
-                    variant="caption1"
-                    weight="medium"
+                    color="semantic.label.strong"
+                    variant="body1"
+                    weight={selected ? "bold" : "regular"}
                   >
-                    내 세션
+                    {INSTRUMENT_LABEL[part]}
                   </Typography>
-                )}
-              </span>
-            </ListCell>
-          );
-        })}
-      </List>
+                  {myParts.includes(part) && (
+                    <Typography
+                      as="span"
+                      color="semantic.label.assistive"
+                      variant="caption1"
+                      weight="medium"
+                    >
+                      내 세션
+                    </Typography>
+                  )}
+                </span>
+              </ListCell>
+            );
+          })}
+        </List>
+      </div>
     </BottomSheet>
   );
 }

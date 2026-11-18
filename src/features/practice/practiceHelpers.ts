@@ -1,12 +1,13 @@
 import type { StatusTone } from "@/components/ui/Status";
 import { formatDuration } from "@/lib/domain/format";
+import { INSTRUMENT_LABEL } from "@/lib/domain/labels";
 import type {
   PracticeFeedback,
   PracticeRecording,
   PracticeStatus,
 } from "@/lib/domain/types";
 
-// 연습 분석 화면들이 같이 쓰는 계산 — 상태 색, 구간 피드백 타임라인, 녹음 파일 제한(서버 §13).
+// 연습 분석 화면들이 같이 쓰는 계산 — 상태 색, 분석 단계, 구간 피드백 타임라인, 녹음 파일 제한(서버 §13).
 
 /** 같은 의미의 상태는 Status 하나로 — 분석 완료 positive · 분석 중 progress · 분석 실패 negative */
 export const PRACTICE_STATUS_TONE: Record<PracticeStatus, StatusTone> = {
@@ -19,6 +20,50 @@ export const PRACTICE_STATUS_TONE: Record<PracticeStatus, StatusTone> = {
 /** 서버가 아직 분석 중인 상태(SUBMITTED·ANALYZING) — 상세를 5초마다 다시 조회한다 */
 export function isAnalysisInProgress(status: PracticeStatus): boolean {
   return status === "SUBMITTED" || status === "ANALYZING";
+}
+
+/** 비교 중(29) 단계 — 올리기는 요청이 받아졌으면 끝났고, SUBMITTED는 차례 기다리기, ANALYZING은 비교 중 */
+export const ANALYSIS_STEPS: { label: string; status?: PracticeStatus }[] = [
+  { label: "녹음 올리기" },
+  { label: "분석 차례 기다리기", status: "SUBMITTED" },
+  { label: "원곡과 비교하기", status: "ANALYZING" },
+];
+
+export type AnalysisStepState = "done" | "current" | "pending";
+
+export function analysisStepState(
+  index: number,
+  status: PracticeStatus,
+): AnalysisStepState {
+  const current = ANALYSIS_STEPS.findIndex((step) => step.status === status);
+  if (current === -1 || index < current) return "done";
+  return index === current ? "current" : "pending";
+}
+
+/** 29·30 제목 아래 한 줄 — "Basket Case · 보컬 · 0:48" */
+export function analysisMeta(recording: PracticeRecording): string {
+  return `${recording.song.title} · ${INSTRUMENT_LABEL[recording.part]} · ${formatDuration(recording.durationSec)}`;
+}
+
+/** 새 연습 분석(11)으로 — 같은 곡·파트를 채워 둔다(다시 녹음 · 다른 녹음 · 새 녹음 올리기) */
+export function newAnalysisPath(recording: PracticeRecording): string {
+  const query = new URLSearchParams({
+    part: recording.part,
+    songId: String(recording.song.id),
+  });
+  return `/practice/new?${query.toString()}`;
+}
+
+/** 서버 피드백 문장("원곡 0:20~0:23 구간과 다르게 연주했어요.")에서 구간을 뺀 부분을 찾는다 */
+const SERVER_FEEDBACK_SENTENCE =
+  /원곡 \d+:\d{2}~\d+:\d{2} 구간과 다르게 연주했어요\.?/;
+
+/**
+ * 피드백 한 줄의 문장. 서버 문장은 구간을 다시 말하므로(시간은 위에 따로 보인다) "원곡과 다르게
+ * 연주했어요"로 줄인다. 그 꼴이 아니면(AI 결과 형식이 바뀌면) 서버 문장을 그대로 보여 준다.
+ */
+export function feedbackSentence(content: string): string {
+  return content.replace(SERVER_FEEDBACK_SENTENCE, "원곡과 다르게 연주했어요");
 }
 
 /** 서버 녹음 제한: 3~60초, 1.95MB(1,950,000바이트) 이하, mp3·m4a·wav */

@@ -14,7 +14,7 @@ import {
   isAnalysisInProgress,
   PRACTICE_STATUS_TONE,
 } from "@/features/practice/practiceHelpers";
-import { listPracticeRecordings } from "@/features/practice/practiceStore";
+import { usePracticeRecordingList } from "@/features/practice/usePracticeRecording";
 import { formatMonthDay } from "@/lib/domain/format";
 import { INSTRUMENT_LABEL, PRACTICE_STATUS_LABEL } from "@/lib/domain/labels";
 import type { PracticeRecording } from "@/lib/domain/types";
@@ -22,6 +22,7 @@ import { getNowPlayingRecording } from "@/mocks/selectors";
 
 // Figma 10 연습 분석 목록(424:13856) · 비었을 때 15 빈 상태(428:15484).
 // 필터 칩(전체 · 분석 완료 · 분석 중)은 같은 화면 안의 필터라 쿼리(?status=)로 남긴다.
+// 분석 중인 녹음이 있으면 5초마다 다시 읽어 끝난 결과를 바로 보여 준다(29 "목록에서 기다리기").
 
 type PracticeFilter = "all" | "done" | "analyzing";
 
@@ -71,7 +72,7 @@ function PracticeListScreen() {
 
   useScreenHeader(useMemo(() => <ScreenHeader title="연습 분석" />, []));
 
-  const recordings = listPracticeRecordings();
+  const recordings = usePracticeRecordingList();
   const nowPlayingId = getNowPlayingRecording()?.id;
   const activeFilter =
     FILTERS.find((item) => item.value === filter) ?? FILTERS[0];

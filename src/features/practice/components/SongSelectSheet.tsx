@@ -54,31 +54,33 @@ function SongSelectSheet({
             찾는 곡이 없어요
           </Typography>
         ) : (
-          <List className="-mx-5">
-            {songs.map((song) => (
-              <MediaRow
-                key={song.id}
-                leading={
-                  <Cover
-                    className="size-12 rounded-sm"
-                    tone={coverToneOf("song", song.id)}
-                  />
-                }
-                meta={song.artist}
-                onClick={() => {
-                  onSelect(song);
-                  onOpenChange(false);
-                }}
-                padding="compact"
-                title={song.title}
-                trailing={
-                  song.id === selectedId ? (
-                    <IconCheck className="size-5 shrink-0 text-label-strong" />
-                  ) : undefined
-                }
-              />
-            ))}
-          </List>
+          <div className="-mx-5">
+            <List>
+              {songs.map((song) => (
+                <MediaRow
+                  key={song.id}
+                  leading={
+                    <Cover
+                      className="size-12 rounded-sm"
+                      tone={coverToneOf("song", song.id)}
+                    />
+                  }
+                  meta={song.artist}
+                  onClick={() => {
+                    onSelect(song);
+                    onOpenChange(false);
+                  }}
+                  padding="compact"
+                  title={song.title}
+                  trailing={
+                    song.id === selectedId ? (
+                      <IconCheck className="size-5 shrink-0 text-label-strong" />
+                    ) : undefined
+                  }
+                />
+              ))}
+            </List>
+          </div>
         )}
       </div>
     </BottomSheet>

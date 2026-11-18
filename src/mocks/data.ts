@@ -729,32 +729,34 @@ function songSummary(id: number) {
 
 /**
  * 내 연습 녹음(서버 §13). 녹음은 3~60초·1.95MB 이하만 올릴 수 있어서 길이도 그 안이다.
- * 한 사람당 진행 중(SUBMITTED·ANALYZING) 분석은 하나뿐이다.
+ * 한 사람당 진행 중(SUBMITTED·ANALYZING) 분석은 하나뿐이다 — 분석 중인 2번은 앱을 연 뒤 30초쯤
+ * 끝난다(features/practice/practiceStore가 서버 진행을 흉내 낸다).
+ * 피드백 한 줄 = 원곡과 다르게 연주한 구간 하나. 내용은 서버 고정 문장, 구간은 정수 초(시작 내림·끝 올림).
  */
 export const PRACTICE_RECORDINGS: PracticeRecording[] = [
   {
     analyzedAt: "2026-11-12T20:13:00",
     createdAt: "2026-11-12T20:10:00",
-    durationSec: 58,
+    durationSec: 48,
     failureReason: null,
     feedbacks: [
       {
-        content: "원곡보다 반 박 빨리 들어왔어요.",
-        endSec: 11,
+        content: "원곡 0:11~0:14 구간과 다르게 연주했어요.",
+        endSec: 14,
         part: "VOCAL",
         startSec: 11,
       },
       {
-        content: "후렴 첫 음이 원곡보다 낮아요.",
-        endSec: 29,
+        content: "원곡 0:27~0:30 구간과 다르게 연주했어요.",
+        endSec: 30,
         part: "VOCAL",
-        startSec: 29,
+        startSec: 27,
       },
       {
-        content: "브릿지에서 박자가 조금 밀렸어요.",
-        endSec: 47,
+        content: "원곡 0:39~0:41 구간과 다르게 연주했어요.",
+        endSec: 41,
         part: "VOCAL",
-        startSec: 47,
+        startSec: 39,
       },
     ],
     id: 1,
@@ -782,10 +784,16 @@ export const PRACTICE_RECORDINGS: PracticeRecording[] = [
     failureReason: null,
     feedbacks: [
       {
-        content: "인트로 코드 전환이 원곡보다 늦어요.",
-        endSec: 8,
+        content: "원곡 0:06~0:09 구간과 다르게 연주했어요.",
+        endSec: 9,
         part: "KEY",
         startSec: 6,
+      },
+      {
+        content: "원곡 0:33~0:36 구간과 다르게 연주했어요.",
+        endSec: 36,
+        part: "KEY",
+        startSec: 33,
       },
     ],
     id: 3,
@@ -798,7 +806,8 @@ export const PRACTICE_RECORDINGS: PracticeRecording[] = [
     analyzedAt: null,
     createdAt: "2026-11-03T19:30:00",
     durationSec: 37,
-    failureReason: "원곡과 맞추지 못했어요. 같은 곡을 다시 녹음해 주세요.",
+    failureReason:
+      "원곡과 맞추지 못했어요. 원곡과 같은 키·빠르기로 녹음했는지 확인해 주세요.",
     feedbacks: [],
     id: 4,
     part: "VOCAL",
@@ -813,8 +822,14 @@ export const PRACTICE_RECORDINGS: PracticeRecording[] = [
     failureReason: null,
     feedbacks: [
       {
-        content: "고음 구간에서 박자가 조금 늦어요.",
-        endSec: 41,
+        content: "원곡 0:12~0:15 구간과 다르게 연주했어요.",
+        endSec: 15,
+        part: "VOCAL",
+        startSec: 12,
+      },
+      {
+        content: "원곡 0:39~0:42 구간과 다르게 연주했어요.",
+        endSec: 42,
         part: "VOCAL",
         startSec: 39,
       },

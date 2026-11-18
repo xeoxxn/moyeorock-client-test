@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { isAnalysisInProgress } from "@/features/practice/practiceHelpers";
-import { findPracticeRecording } from "@/features/practice/practiceStore";
+import {
+  findPracticeRecording,
+  listPracticeRecordings,
+} from "@/features/practice/practiceStore";
 
 /** 서버 흐름(§13 ④): 분석 중이면 상세를 5초쯤 간격으로 다시 조회하다 DONE·FAILED면 멈춘다. */
 export const PRACTICE_POLL_INTERVAL_MS = 5_000;
@@ -33,4 +36,24 @@ export function usePracticeRecording(id: number) {
   }, [polling, refresh]);
 
   return { recording, refresh };
+}
+
+// 내 연습 녹음 목록(GET /v1/users/me/practice-recordings). 29의 "목록에서 기다리기"로 온 사람이 목록에서
+// 결과를 보도록, 분석 중인 녹음이 있는 동안만 같은 간격으로 다시 읽는다.
+export function usePracticeRecordingList() {
+  const [recordings, setRecordings] = useState(listPracticeRecordings);
+  const polling = recordings.some((recording) =>
+    isAnalysisInProgress(recording.status),
+  );
+
+  useEffect(() => {
+    if (!polling) return;
+    const timer = window.setInterval(
+      () => setRecordings(listPracticeRecordings()),
+      PRACTICE_POLL_INTERVAL_MS,
+    );
+    return () => window.clearInterval(timer);
+  }, [polling]);
+
+  return recordings;
 }

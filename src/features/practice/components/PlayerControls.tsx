@@ -8,6 +8,7 @@ import volumeLowIcon from "@/assets/player/volume-low.svg";
 import { cn } from "@/lib/cn";
 
 // Figma 05의 Controls(418:12808) · Volume(418:12826) — 이전 구간 / 큰 주홍 재생 / 다음 구간, 그 아래 음량.
+// 결과 화면이 바닥 패널 바로 위에 붙이므로 위 여백은 두지 않는다(제목과의 사이는 화면이 늘려 채운다).
 // WDS 아이콘에 건너뛰기·음량이 없어 Figma 에셋(src/assets/player)을 WDS IconButton 안에 넣는다.
 // 이전·다음은 트랙이 아니라 구간 피드백 사이를 오간다.
 interface PlayerControlsProps {
@@ -35,7 +36,7 @@ function PlayerControls({
 }: PlayerControlsProps) {
   return (
     <div className="flex flex-col">
-      <div className="flex items-center justify-center gap-11 pt-6 pb-3">
+      <div className="flex items-center justify-center gap-11 pb-3">
         <IconButton
           aria-label="이전 구간"
           disabled={!hasPrevious}
@@ -73,7 +74,7 @@ function PlayerControls({
           />
         </IconButton>
       </div>
-      <div className="flex items-center gap-3 px-5 pb-2">
+      <div className="flex items-center gap-3 px-5">
         <IconButton
           aria-label="소리 끄기"
           onClick={() => onVolumeChange(0)}
