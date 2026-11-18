@@ -2,27 +2,28 @@ import {
   ActionArea,
   ActionAreaButton,
   Button,
-  Chip,
-  List,
-  ListCell,
-  ListCellContent,
-  TextButton,
+  IconButton,
   Typography,
   useToast,
 } from "@wanteddev/wds";
-import { useState } from "react";
+import { IconMoreVertical } from "@wanteddev/wds-icon";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import Badge from "@/components/ui/Badge";
+import PersonRow from "@/components/list/PersonRow";
+import ActionSheet, { type ActionSheetItem } from "@/components/ui/ActionSheet";
+import BottomActionArea from "@/components/ui/BottomActionArea";
 import BottomSheet from "@/components/ui/BottomSheet";
-import { rowClick } from "@/components/ui/listCellEvents";
+import ChipGrid from "@/components/ui/ChipGrid";
+import ConfirmSheet from "@/components/ui/ConfirmSheet";
+import { innerClick } from "@/components/ui/listCellEvents";
+import ScreenBody from "@/components/ui/ScreenBody";
+import ScreenHeader from "@/components/ui/ScreenHeader";
 import SectionHeader from "@/components/ui/SectionHeader";
 import SelectField from "@/components/ui/SelectField";
 import TextInputField from "@/components/ui/TextInputField";
-import { useAppAlert } from "@/components/ui/useAppAlert";
-import MemberCell from "@/features/team/components/MemberCell";
+import { useScreenHeader } from "@/components/ui/useScreenHeader";
 import TeamFallback from "@/features/team/components/TeamFallback";
-import TeamHeroTabs from "@/features/team/components/TeamHeroTabs";
 import {
   isTeamLeader,
   useTeamParam,
@@ -47,6 +48,7 @@ import { getMe } from "@/mocks/selectors";
 
 // 서버 TeamUpdateRequest 제한
 const NAME_MAX_LENGTH = 50;
+const DESCRIPTION_MAX_LENGTH = 500;
 const GENRE_MAX_COUNT = 5;
 
 const REGION_SELECT_OPTIONS = REGION_OPTIONS.map((region) => ({
@@ -54,34 +56,64 @@ const REGION_SELECT_OPTIONS = REGION_OPTIONS.map((region) => ({
   value: region,
 }));
 
-// Figma: 팀/07 팀 관리 (nodeId 101:23217) + 팀/12 팀 해체 확인(142:20222) — 팀장만.
-// 팀 정보 수정(PUT /teams/{id}), 팀원 관리(팀장 위임 · 세션 변경 · 내보내기), 팀 해체.
-// 팀 해체 확인은 예전 손수 만든 모달 대신 WDS 확인창(useAppAlert)으로 띄운다.
+interface ConfirmRequest {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+}
+
+// 팀 관리 `/team/:teamId/manage`(팀장만, 팀 화면 더보기에서 온다) — Figma 21·24 폼과 같은 모양.
+// - 팀 정보 수정: PUT /teams/{id}(전체 교체) — 하단 "저장"
+// - 팀원 ⋮: 팀장 넘기기 · 세션 변경(PATCH /teams/{teamId}/members/{userId} {role, instrument}) ·
+//   내보내기(PATCH …/status {REMOVED})
+// - 팀 해체: PATCH /teams/{id}/status — 선택곡과 공연에 넘긴 곡도 함께 지워진다(서버).
+// 되돌리기 어려운 결정(넘기기 · 내보내기 · 해체)은 확정 시트(Figma 17)로 한 번 더 묻는다.
 function TeamManageScreen() {
   const team = useTeamParam();
   if (!team) return <TeamFallback kind="notFound" />;
   if (!isTeamLeader(team))
-    return <TeamFallback kind="leaderOnly" team={team} />;
+    return <TeamFallback kind="leaderOnly" teamId={team.id} />;
   return <TeamManageContent team={team} />;
 }
 
 function TeamManageContent({ team }: { team: Team }) {
   const navigate = useNavigate();
   const toast = useToast();
-  const alert = useAppAlert();
   const meId = getMe().id;
 
+  useScreenHeader(useMemo(() => <ScreenHeader title="팀 관리" />, []));
+
+  const [saved, setSaved] = useState({
+    description: team.description,
+    genres: team.genres,
+    name: team.name,
+    region: team.region,
+  });
   const [name, setName] = useState(team.name);
   const [description, setDescription] = useState(team.description);
   const [region, setRegion] = useState<Region>(team.region);
   const [genres, setGenres] = useState<Genre[]>(team.genres);
 
   const [members, setMembers] = useState(team.members);
-  // 멤버 시트: 누구를 열었는지 + 메뉴 / 세션 고르기 단계
   const [target, setTarget] = useState<TeamMember | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetStep, setSheetStep] = useState<"menu" | "session">("menu");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [sessionOpen, setSessionOpen] = useState(false);
   const [nextInstrument, setNextInstrument] = useState<Instrument | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const dirty =
+    name !== saved.name ||
+    description !== saved.description ||
+    region !== saved.region ||
+    genres.join() !== saved.genres.join();
+  const canSave = dirty && name.trim() !== "";
+
+  const ask = (request: ConfirmRequest) => {
+    setConfirm(request);
+    setConfirmOpen(true);
+  };
 
   const toggleGenre = (genre: Genre) => {
     if (genres.includes(genre)) {
@@ -98,46 +130,64 @@ function TeamManageContent({ team }: { team: Team }) {
     setGenres((prev) => [...prev, genre]);
   };
 
-  const saveInfo = () => {
+  const save = () => {
+    setSaved({ description, genres, name, region });
     toast({ content: "팀 정보를 저장했어요", variant: "positive" });
   };
 
   const openMember = (member: TeamMember) => {
     setTarget(member);
-    setSheetStep("menu");
-    setNextInstrument(member.instrument);
-    setSheetOpen(true);
+    setMenuOpen(true);
   };
 
-  const delegate = async (member: TeamMember) => {
-    setSheetOpen(false);
-    const result = await alert({
-      cancel: "취소",
-      confirm: "위임",
-      content:
-        "넘기면 나는 멤버가 되고, 팀 관리·곡 추가·팀원 초대를 더 할 수 없어요.",
-      title: `${member.user.nickname}님에게 팀장을 넘길까요?`,
-    });
-    if (result !== "confirm") return;
-    toast({ content: "팀장을 넘겼어요", variant: "positive" });
-    // 이제 팀장이 아니라 관리 탭이 사라진다 — 팀 홈으로 돌려보낸다.
-    navigate(`/team/${team.id}`, { replace: true });
-  };
-
-  const removeMember = async (member: TeamMember) => {
-    setSheetOpen(false);
-    const result = await alert({
-      cancel: "취소",
-      confirm: "내보내기",
-      content:
-        "내보낸 팀원에게 알림이 가요. 다시 들어오려면 초대나 지원이 필요해요.",
-      title: `${member.user.nickname}님을 내보낼까요?`,
-    });
-    if (result !== "confirm") return;
-    setMembers((prev) =>
-      prev.filter((item) => item.user.id !== member.user.id),
-    );
-    toast({ content: "팀에서 내보냈어요", variant: "positive" });
+  const memberItems = (member: TeamMember): ActionSheetItem[] => {
+    const nickname = member.user.nickname;
+    const isSelf = member.user.id === meId;
+    const changeSession: ActionSheetItem = {
+      caption: `지금 ${INSTRUMENT_LABEL[member.instrument]}`,
+      label: "세션 변경",
+      onSelect: () => {
+        setNextInstrument(member.instrument);
+        setSessionOpen(true);
+      },
+    };
+    if (isSelf) return [changeSession];
+    return [
+      {
+        caption: "넘기면 나는 멤버가 돼요",
+        label: "팀장 넘기기",
+        onSelect: () =>
+          ask({
+            confirmLabel: "넘기기",
+            description:
+              "넘기면 나는 멤버가 되고,\n팀 관리·곡 추가·팀원 초대를 더 할 수 없어요.",
+            onConfirm: () => {
+              toast({ content: "팀장을 넘겼어요", variant: "positive" });
+              // 이제 팀장이 아니라 이 화면을 볼 수 없다 — 팀 홈으로 돌려보낸다.
+              navigate(`/team/${team.id}`, { replace: true });
+            },
+            title: `${nickname}님에게 팀장을 넘길까요?`,
+          }),
+      },
+      changeSession,
+      {
+        destructive: true,
+        label: "내보내기",
+        onSelect: () =>
+          ask({
+            confirmLabel: "내보내기",
+            description:
+              "내보낸 팀원에게 알림이 가요.\n다시 들어오려면 초대가 필요해요.",
+            onConfirm: () => {
+              setMembers((prev) =>
+                prev.filter((item) => item.user.id !== member.user.id),
+              );
+              toast({ content: "팀에서 내보냈어요", variant: "positive" });
+            },
+            title: `${nickname}님을 내보낼까요?`,
+          }),
+      },
+    ];
   };
 
   const changeInstrument = () => {
@@ -149,200 +199,148 @@ function TeamManageContent({ team }: { team: Team }) {
           : item,
       ),
     );
-    setSheetOpen(false);
+    setSessionOpen(false);
     toast({ content: "세션을 바꿨어요", variant: "positive" });
   };
 
-  const disband = async () => {
-    const result = await alert({
-      cancel: "취소",
-      confirm: "해체",
-      content: `${team.name}의 팀원 ${members.length}명이 모두 팀에서 나가고, 선택곡${
-        team.performanceId !== null ? "과 공연 셋리스트로 넘긴 곡" : ""
-      }도 함께 지워져요. 되돌릴 수 없어요.`,
+  const askDisband = () =>
+    ask({
+      confirmLabel: "해체",
+      description: `팀원 ${members.length}명이 모두 나가고 선택곡${
+        team.performanceId !== null ? "과 공연에 넘긴 곡" : ""
+      }도 지워져요.\n되돌릴 수 없어요.`,
+      onConfirm: () => {
+        toast({ content: "팀을 해체했어요", variant: "positive" });
+        navigate("/crew?tab=team", { replace: true });
+      },
       title: "팀을 해체할까요?",
     });
-    if (result !== "confirm") return;
-    toast({ content: "팀을 해체했어요", variant: "positive" });
-    navigate("/crew?tab=team", { replace: true });
-  };
-
-  const isSelf = target?.user.id === meId;
 
   return (
-    <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
-      <TeamHeroTabs active="manage" team={team} />
-
-      <section className="flex flex-col gap-5 px-5 pt-6 pb-8">
-        <SectionHeader title="팀 정보" />
-        <TextInputField
-          error={name.trim() === "" ? "팀 이름을 입력해 주세요" : undefined}
-          label="팀 이름"
-          maxLength={NAME_MAX_LENGTH}
-          onChange={setName}
-          value={name}
-        />
-        <TextInputField
-          label="소개"
-          maxLength={500}
-          multiline
-          onChange={setDescription}
-          placeholder="어떤 음악을 하는 팀인지 적어 주세요"
-          value={description}
-        />
-        <SelectField
-          label="활동 지역"
-          onChange={setRegion}
-          options={REGION_SELECT_OPTIONS}
-          value={region}
-        />
-        <div className="flex flex-col gap-3">
-          <Typography
-            color="semantic.label.alternative"
-            variant="label2"
-            weight="medium"
-          >
-            장르 (최대 {GENRE_MAX_COUNT}개)
-          </Typography>
-          <div className="flex flex-wrap gap-2">
-            {GENRE_OPTIONS.map((genre) => (
-              <Chip
-                active={genres.includes(genre)}
-                key={genre}
-                onClick={() => toggleGenre(genre)}
-                size="large"
-                variant="outlined"
-              >
-                {GENRE_LABEL[genre]}
-              </Chip>
-            ))}
-          </div>
+    <>
+      <ScreenBody>
+        <SectionHeader first title="팀 정보" />
+        <div className="flex flex-col gap-6 px-5">
+          <TextInputField
+            error={name.trim() === "" ? "팀 이름을 입력해 주세요" : undefined}
+            label="팀 이름"
+            maxLength={NAME_MAX_LENGTH}
+            onChange={setName}
+            value={name}
+          />
+          <TextInputField
+            label="소개"
+            maxLength={DESCRIPTION_MAX_LENGTH}
+            multiline
+            onChange={setDescription}
+            placeholder="어떤 음악을 하는 팀인지 적어 주세요"
+            value={description}
+          />
+          <SelectField
+            label="활동 지역"
+            onChange={setRegion}
+            options={REGION_SELECT_OPTIONS}
+            value={region}
+          />
+          <ChipGrid
+            isSelected={(genre) => genres.includes(genre)}
+            label="장르"
+            message={`최대 ${GENRE_MAX_COUNT}개`}
+            onToggle={toggleGenre}
+            options={GENRE_OPTIONS.map((value) => ({
+              label: GENRE_LABEL[value],
+              value,
+            }))}
+          />
         </div>
-        <Button
-          color="primary"
-          disabled={name.trim() === ""}
-          fullWidth
-          onClick={saveInfo}
-          size="large"
-          variant="solid"
-        >
-          변경 내용 저장
-        </Button>
-      </section>
 
-      <div className="h-3 w-full shrink-0 bg-surface" />
+        <SectionHeader title={`팀원 ${members.length}명`} />
+        {members.map((member) => (
+          <PersonRow
+            key={member.user.id}
+            meta={
+              member.role === "LEADER"
+                ? `${INSTRUMENT_LABEL[member.instrument]} · ${TEAM_ROLE_LABEL.LEADER}`
+                : INSTRUMENT_LABEL[member.instrument]
+            }
+            name={member.user.nickname}
+            onClick={() => openMember(member)}
+            profileImage={member.user.profileImage}
+            trailing={
+              <IconButton
+                aria-label={`${member.user.nickname} 관리`}
+                color="semantic.label.alternative"
+                onClick={innerClick(() => openMember(member))}
+                size={20}
+                variant="normal"
+              >
+                <IconMoreVertical />
+              </IconButton>
+            }
+          />
+        ))}
 
-      <section className="flex flex-col gap-1 px-5 pt-6 pb-8">
-        <SectionHeader count={members.length} title="팀원 관리" />
-        <Typography
-          color="semantic.label.alternative"
-          variant="label2"
-          weight="medium"
-        >
-          팀원을 눌러 팀장 위임·세션 변경·내보내기를 할 수 있어요.
-        </Typography>
-        <List>
-          {members.map((member) => (
-            <MemberCell
-              caption={INSTRUMENT_LABEL[member.instrument]}
-              key={member.user.id}
-              nickname={
-                member.user.id === meId
-                  ? `${member.user.nickname} (나)`
-                  : member.user.nickname
-              }
-              onPress={() => openMember(member)}
-              trailing={
-                member.role === "LEADER" ? (
-                  <ListCellContent variant="chevron">
-                    <Badge glow>{TEAM_ROLE_LABEL.LEADER}</Badge>
-                  </ListCellContent>
-                ) : undefined
-              }
-            />
-          ))}
-        </List>
-      </section>
+        <SectionHeader title="팀 해체" />
+        <div className="flex flex-col gap-3 px-5">
+          <Typography color="semantic.label.alternative" variant="label2">
+            해체하면 팀원이 모두 나가고 선택곡이 지워져요. 되돌릴 수 없어요.
+          </Typography>
+          <Button
+            color="assistive"
+            fullWidth
+            onClick={askDisband}
+            size="large"
+            variant="outlined"
+          >
+            팀 해체
+          </Button>
+        </div>
+      </ScreenBody>
 
-      <div className="h-3 w-full shrink-0 bg-surface" />
+      <BottomActionArea disabled={!canSave} label="저장" onClick={save} />
 
-      <section className="flex flex-col items-start gap-1 px-5 pt-6 pb-10">
-        <TextButton color="primary" onClick={disband} size="medium">
-          팀 해체하기
-        </TextButton>
-        <Typography
-          color="semantic.label.assistive"
-          variant="caption1"
-          weight="medium"
-        >
-          해체하면 팀과 선택곡이 사라지고 되돌릴 수 없어요.
-        </Typography>
-      </section>
-
+      <ActionSheet
+        items={target ? memberItems(target) : []}
+        onOpenChange={setMenuOpen}
+        open={menuOpen}
+        title={target?.user.nickname}
+      />
       <BottomSheet
         footer={
-          sheetStep === "session" ? (
-            <ActionArea variant="strong">
-              <ActionAreaButton
-                disabled={nextInstrument === target?.instrument}
-                onClick={changeInstrument}
-              >
-                세션 변경
-              </ActionAreaButton>
-            </ActionArea>
-          ) : undefined
-        }
-        onOpenChange={setSheetOpen}
-        open={sheetOpen}
-        title={target?.user.nickname}
-      >
-        {target && sheetStep === "menu" && (
-          <List>
-            {!isSelf && (
-              <ListCell
-                onClick={rowClick(() => delegate(target))}
-                textProps={{ caption: "넘기면 나는 멤버가 돼요" }}
-                trailingContent={<ListCellContent variant="chevron" />}
-              >
-                팀장 위임
-              </ListCell>
-            )}
-            <ListCell
-              onClick={rowClick(() => setSheetStep("session"))}
-              textProps={{
-                caption: `지금 ${INSTRUMENT_LABEL[target.instrument]}`,
-              }}
-              trailingContent={<ListCellContent variant="chevron" />}
+          <ActionArea variant="strong">
+            <ActionAreaButton
+              disabled={nextInstrument === target?.instrument}
+              onClick={changeInstrument}
             >
-              세션 변경
-            </ListCell>
-            {!isSelf && (
-              <ListCell
-                onClick={rowClick(() => removeMember(target))}
-                textProps={{ color: "semantic.primary.normal" }}
-              >
-                내보내기
-              </ListCell>
-            )}
-          </List>
-        )}
-        {target && sheetStep === "session" && (
-          <div className="flex flex-wrap gap-2 pb-2">
-            {INSTRUMENT_OPTIONS.map((option) => (
-              <Chip
-                active={nextInstrument === option}
-                key={option}
-                onClick={() => setNextInstrument(option)}
-                size="large"
-                variant="outlined"
-              >
-                {INSTRUMENT_LABEL[option]}
-              </Chip>
-            ))}
-          </div>
-        )}
+              변경
+            </ActionAreaButton>
+          </ActionArea>
+        }
+        onOpenChange={setSessionOpen}
+        open={sessionOpen}
+        title={target ? `${target.user.nickname}님 세션` : undefined}
+      >
+        <ChipGrid
+          isSelected={(instrument) => nextInstrument === instrument}
+          label="세션"
+          onToggle={setNextInstrument}
+          options={INSTRUMENT_OPTIONS.map((value) => ({
+            label: INSTRUMENT_LABEL[value],
+            value,
+          }))}
+        />
       </BottomSheet>
-    </div>
+      {confirm && (
+        <ConfirmSheet
+          confirmLabel={confirm.confirmLabel}
+          description={confirm.description}
+          onConfirm={confirm.onConfirm}
+          onOpenChange={setConfirmOpen}
+          open={confirmOpen}
+          title={confirm.title}
+        />
+      )}
+    </>
   );
 }
 

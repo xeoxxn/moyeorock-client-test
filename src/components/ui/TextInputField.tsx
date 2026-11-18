@@ -8,9 +8,11 @@ import {
   TextField,
 } from "@wanteddev/wds";
 import type { HTMLInputTypeAttribute } from "react";
+import { fieldLabelSx } from "@/components/ui/FieldLabel";
 
 // 라벨 + 입력 칸 + 안내/에러 문구 — WDS `FormField`·`FormLabel`·`FormControl` 위에 `TextField`
 // (또는 여러 줄이면 `TextArea`)를 얹는다. 화면에서 <input>을 직접 쓰지 않고 이걸 쓴다.
+
 interface TextInputFieldProps {
   label: string;
   value: string;
@@ -41,7 +43,7 @@ function TextInputField({
 }: TextInputFieldProps) {
   return (
     <FormField>
-      <FormLabel>{label}</FormLabel>
+      <FormLabel sx={fieldLabelSx}>{label}</FormLabel>
       <FormControl>
         {multiline ? (
           <TextArea

@@ -1,80 +1,203 @@
 @import "tailwindcss";
 @import "@wanteddev/wds/global.css" layer(base);
 
-/* Figma "모여락 다크(네온)" 디자인에는 Variables가 연결돼 있지 않다(컨퍼런스용으로 새로 그려진
-   컨셉 디자인이라 Variables 대신 실측 hex로 칠해져 있음). 그래서 WDS 시맨틱 변수 값을 모여락의
-   레드 네온 브랜드 값으로 덮어쓴다 — 이렇게 하면 Button/Checkbox/TopNavigation 같은 WDS
-   컴포넌트가 별도 색 prop 없이도 기본 블루 대신 모여락 브랜드 색을 그대로 쓴다.
-   값은 화면별로 get_design_context 실측 대조 후 확정한다(온보딩 로그인 101:11297,
-   홈 대시보드 101:11527 기준). */
+/* Figma "UI 최종 디자인"(페이지 404:10893)의 Foundation(410:11069) — 로컬 변수 컬렉션 "모여락 UI".
+   음악 앱(Spotify·YouTube Music·멜론)처럼 중립 검정 바탕에, 포인트는 발표 표지 주홍(#C64537) 하나다.
+   WDS 시맨틱 변수 값을 이 팔레트로 덮어써서 Button/TopNavigation/Tab 같은 WDS 컴포넌트가 별도 색
+   prop 없이도 같은 색을 쓰게 한다. 화면 파일에는 #색을 쓰지 않고 아래 Tailwind 토큰만 쓴다. */
 @layer base {
   html[data-theme="dark"] {
-    --semantic-primary-normal: #ff3b33;
-    --semantic-primary-strong: #df2b24;
-    --semantic-primary-heavy: #c21f19;
-    --semantic-line-primary-normal: rgba(255, 59, 51, 0.28);
+    --semantic-primary-normal: #c64537;
+    --semantic-primary-strong: #b23d30;
+    --semantic-primary-heavy: #9c3529;
+    --semantic-line-primary-normal: rgba(198, 69, 55, 0.32);
 
-    /* 배경 3단계 — 캔버스(가장 어두움) < 카드/표면 < 떠 있는 표면(Bottom Nav 등) */
-    --semantic-background-normal-alternative: #0b0b0d;
-    --semantic-background-normal-normal: #17171a;
-    --semantic-background-elevated-normal: #121214;
+    /* 바탕 3단계 — bg/base(캔버스) < bg/elevated(카드·시트·입력 칸) < bg/press(눌림·타일) */
+    --semantic-background-normal-alternative: #101012;
+    --semantic-background-normal-normal: #1c1c1f;
+    --semantic-background-elevated-normal: #1c1c1f;
+    --semantic-background-elevated-alternative: #1c1c1f;
 
-    --semantic-label-strong: #ffffff;
-    --semantic-label-normal: #f2f2f5;
-    --semantic-label-alternative: #b8b8c2;
-    --semantic-label-assistive: #7a7a85;
+    /* 글자 3단계 — text/primary · secondary · tertiary. strong·normal은 둘 다 primary다. */
+    --semantic-label-strong: #f4f4f5;
+    --semantic-label-normal: #f4f4f5;
+    --semantic-label-neutral: #c4c4cc;
+    --semantic-label-alternative: #a1a1aa;
+    --semantic-label-assistive: #7a7a83;
 
+    /* line/divider(흰색 8%) */
     --semantic-line-normal-neutral: rgba(255, 255, 255, 0.08);
     --semantic-line-solid-neutral: rgba(255, 255, 255, 0.12);
 
-    /* WDS TopNavigation 좌우 여백을 화면 본문 여백(px-5)과 맞춘다 — 기본 16px이라 헤더 아이콘과
-       본문 카드의 왼쪽 끝이 어긋났다. ActionArea는 기본값이 이미 같다. */
+    /* WDS TopNavigation 좌우 여백을 화면 본문 여백(px-5)과 맞춘다. */
     --wds-top-navigation-padding-x: 1.25rem;
   }
 
-  /* WDS ThemeProvider는 기본으로 body 배경을 semantic.background.normal.normal(카드 색,
-   * #17171a)로 칠한다 — main.tsx에서 disableDefaultGlobalStyle로 그 동작을 끄고 대신 여기서
-   * 화면 캔버스 색(캔버스 #0b0b0d)을 직접 칠한다. 노치 기기의 세이프에어리어 자리는 우리
-   * 레이아웃 바깥(body)이 비쳐 보이는 자리라, 카드 색이 섞이면 캔버스와 다른 색 틈이 생긴다. */
+  /* WDS ThemeProvider의 기본 body 배경(카드 색)을 끄고(main.tsx disableDefaultGlobalStyle) 캔버스 색을
+     직접 칠한다 — 노치 기기의 세이프에어리어 틈으로 비치는 자리가 캔버스와 같은 색이어야 한다. */
   body {
     background-color: var(--semantic-background-normal-alternative);
   }
 }
 
 @theme {
-  /* WDS(@wanteddev/wds/global.css)의 시맨틱 CSS 변수를 Tailwind 색 토큰으로 별칭 연결.
-     값을 새로 정의하지 않고 위에서 덮어쓴 WDS 변수를 그대로 참조하므로, WDS 컴포넌트와
-     화면 마크업이 항상 같은 색을 쓴다. */
+  /* WDS 시맨틱 변수를 Tailwind 색 토큰으로 별칭 연결 — WDS 컴포넌트와 화면 마크업이 같은 색을 쓴다. */
   --color-background: var(--semantic-background-normal-alternative);
   --color-surface: var(--semantic-background-normal-normal);
   --color-surface-elevated: var(--semantic-background-elevated-normal);
+  /* bg/press — 눌림 상태, "+ 새로 만들기" 타일 */
+  --color-press: #28282c;
 
   --color-label-strong: var(--semantic-label-strong);
   --color-label-normal: var(--semantic-label-normal);
   --color-label-alternative: var(--semantic-label-alternative);
   --color-label-assistive: var(--semantic-label-assistive);
 
-  /* 테두리는 아주 흐리게 간다 — 카드가 테두리가 아니라 bg-surface의 명도 차로 떠 보이는 게
-     이 다크 테마에 맞다(원래는 WDS 기본값인 흰색 8%/12%를 그대로 썼는데 선이 또렷해서
-     화면이 어수선했다). 여기서 더 낮추면 배경에 묻혀 사실상 테두리가 사라진다.
-     WDS 시맨틱 변수(--semantic-line-*)는 건드리지 않는다 — TextField·Select 같은 WDS
-     컴포넌트가 제 테두리로 쓰는 값이라, 같이 낮추면 입력 필드 외곽이 안 보인다. */
-  --color-line-neutral: rgba(255, 255, 255, 0.02);
-  --color-line-solid: rgba(255, 255, 255, 0.04);
+  --color-line-neutral: var(--semantic-line-normal-neutral);
+  --color-line-solid: var(--semantic-line-solid-neutral);
 
+  /* accent/red(포인트 주홍)와 accent/text(어두운 바탕 위 주홍 글자 — '오늘'·'내 팀'·D-8) */
   --color-accent: var(--semantic-primary-normal);
   --color-accent-strong: var(--semantic-primary-strong);
-  --color-accent-heavy: var(--semantic-primary-heavy);
-  /* 모임 모집 배지 등 accent를 8~20% 오퍼시티로 깐 자리(Figma rgba(223,43,36,0.2)).
-     WDS 시맨틱 세트에 없는 값이라 모여락 전용 토큰으로 추가했다. */
-  --color-accent-subtle: rgba(223, 43, 36, 0.2);
+  --color-accent-text: #e35a44;
+
+  /* 상태색 — Status(분석 완료=positive, 분석 중·모집 중=progress, 실패=negative) */
+  --color-status-positive: #5b9bff;
+  --color-status-progress: #ff9f3d;
+  --color-status-negative: #e35a44;
+
+  /* 커버(앨범 아트) 바탕 — 파트별 색은 src/components/music/Cover.tsx가 고른다. */
+  --color-cover-red: #3f1a1c;
+  --color-cover-blue: #18253d;
+  --color-cover-green: #16301f;
+  --color-cover-violet: #2a1f3d;
+  --color-cover-teal: #12333a;
+  /* 커버 글로우(상세 화면 위쪽 그라데이션) — 대부분 커버색 그대로지만 teal만 더 밝은 값을 쓴다. */
+  --color-cover-glow-teal: #2b7480;
 
   --color-static-white: var(--semantic-static-white);
   --color-static-black: var(--semantic-static-black);
 
-  /* 카카오 로그인 버튼 — WDS 시맨틱 세트에 없는 카카오 브랜드 컬러라 모여락 전용 토큰으로 추가 */
+  /* 카카오 로그인 버튼 — 카카오 브랜드 가이드 색 */
   --color-kakao: #fee500;
-  --color-kakao-label: #1a1a1a;
+  --color-kakao-label: rgba(0, 0, 0, 0.85);
+
+  /* 숫자(시간·날짜·통계)·커버 파트 글자·워드마크용 브랜드 글꼴. index.html에서 불러온다. */
+  --font-number: "Archivo Black", "Pretendard JP", sans-serif;
+  /* Figma "모여락/Number" — 날짜·통계 숫자(22/26)와 오늘 합주 카드의 큰 시간(52) */
+  --text-number: 1.375rem;
+  --text-number--line-height: 1.625rem;
+  --text-number--letter-spacing: -0.02em;
+  --text-number-lg: 3.25rem;
+  --text-number-lg--line-height: 3.625rem;
+  --text-number-lg--letter-spacing: -0.03em;
+}
+
+/* 커버 안 파트 글자(Vocal · Electric Guitar …) — 커버 크기에 비례해야 해서(56px에 10px, 132px에 24px)
+   컨테이너 폭 기준 단위를 쓴다. Cover가 container-type: inline-size를 켠다. */
+@utility cover-label {
+  font-family: var(--font-number);
+  font-size: 18cqw;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  left: 8cqw;
+  right: 8cqw;
+  bottom: 8cqw;
+}
+
+/* 커버 위에 대각으로 얹는 광택 — 왼쪽 위 흰 14% → 오른쪽 아래 검정 25% (Figma Cover 채움 그대로) */
+@utility cover-sheen {
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.14) 14.286%,
+    rgba(0, 0, 0, 0.25) 85.714%
+  );
+}
+
+/* 탭 화면 위쪽 은은한 주홍 그라데이션(Stage Glow, 17%)과 상세 화면의 커버색 그라데이션(Cover Glow, 34%) */
+@utility stage-glow {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-accent) 17%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+@utility cover-glow-red {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-cover-red) 34%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+@utility cover-glow-blue {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-cover-blue) 34%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+@utility cover-glow-green {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-cover-green) 34%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+@utility cover-glow-violet {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-cover-violet) 34%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+@utility cover-glow-teal {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-cover-glow-teal) 34%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+/* 하단 탭 위에 떠 있는 미니 플레이어 뒤로 깔리는 페이드(Music/Bottom Fade) */
+@utility bottom-fade {
+  background-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-background) 92%, transparent) 50%,
+    var(--color-background) 100%
+  );
+}
+
+/* 미니 플레이어 바탕 — 지금 듣는 녹음의 커버색 위에 검정 35% */
+@utility mini-player-dim {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35));
+}
+
+/* 오늘 합주 카드(Today Card) — 주홍 위에 오른쪽 아래로 검정 50%, 왼쪽 위 흰 광택 8% */
+@utility today-card {
+  background-color: var(--color-accent);
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+    linear-gradient(135deg, transparent 0%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+/* 시작 화면 사진 위 스크림 — 위쪽은 어둡게, 로고 아래 가운데가 가장 밝고, 버튼 쪽은 다시 어둡게 */
+@utility onboarding-scrim {
+  background-image: linear-gradient(
+    180deg,
+    rgba(8, 8, 10, 0.96) 0%,
+    rgba(8, 8, 10, 0.88) 23%,
+    rgba(8, 8, 10, 0.72) 34%,
+    rgba(8, 8, 10, 0.52) 46%,
+    rgba(8, 8, 10, 0.42) 54%,
+    rgba(8, 8, 10, 0.74) 66%,
+    rgba(8, 8, 10, 0.96) 100%
+  );
 }
 
 /* iOS 노치·홈 인디케이터 자리. index.html의 viewport-fit=cover와 한 쌍이다.
@@ -102,47 +225,6 @@
   &::-webkit-scrollbar {
     display: none;
   }
-}
-
-/* 모여락 다크(네온) 테마의 핵심 장식 — 레드 네온 글로우. 화면마다 blur·opacity를 따로 재는 대신
-   세 단계로 뺐다(마스코트·카드=lg/md, 뱃지·작은 아이콘=sm). 값은 Figma 실측(shadow 0 0 34px
-   rgba(255,59,51,.55) 등)의 대표값으로 정리했고, 화면별 미세 편차는 감안하지 않는다. */
-@utility shadow-neon-sm {
-  box-shadow: 0 0 12px 0 rgba(255, 59, 51, 0.7);
-}
-
-@utility shadow-neon-md {
-  box-shadow: 0 0 20px 0 rgba(255, 59, 51, 0.6);
-}
-
-@utility shadow-neon-lg {
-  box-shadow: 0 0 34px 0 rgba(255, 59, 51, 0.55);
-}
-
-/* 마스코트 PNG(누끼 딴 투명 배경)처럼 알파 채널이 있는 이미지에 글로우를 줄 때는 반드시
-   drop-shadow-neon-*를 쓴다. shadow-neon-*(box-shadow)는 엘리먼트의 사각형 박스 기준으로
-   그려져서, 투명한 여백까지 포함한 네모난 박스가 그대로 비쳐 보인다(실제로 겪은 버그 —
-   캐릭터 뒤에 각진 배경 박스가 생기는 것처럼 보였다). filter: drop-shadow()는 알파 채널의
-   실제 실루엣을 따라가므로 이미지에는 이쪽을 쓴다. */
-@utility drop-shadow-neon-sm {
-  filter: drop-shadow(0 0 8px rgba(255, 59, 51, 0.7));
-}
-
-@utility drop-shadow-neon-md {
-  filter: drop-shadow(0 0 14px rgba(255, 59, 51, 0.6));
-}
-
-@utility drop-shadow-neon-lg {
-  filter: drop-shadow(0 0 22px rgba(255, 59, 51, 0.55));
-}
-
-/* 네온 텍스트 글로우 — 강조 헤드라인·로고에 사용 */
-@utility text-glow {
-  text-shadow: 0 0 16px rgba(255, 59, 51, 0.9);
-}
-
-@utility text-glow-sm {
-  text-shadow: 0 0 10px rgba(255, 59, 51, 0.9);
 }
 
 /* ── 화면 전환(Shared Axis X) ───────────────────────────────────────────────────

@@ -1,226 +1,190 @@
-import {
-  Button,
-  Category,
-  CategoryList,
-  CategoryListItem,
-  Tab,
-  TabList,
-  TabListItem,
-  TopNavigationButton,
-  Typography,
-} from "@wanteddev/wds";
-import {
-  IconBell,
-  IconLocation,
-  IconMusicMicrophone,
-  IconPersons,
-  IconPlus,
-} from "@wanteddev/wds-icon";
-import { useState } from "react";
+import { TextButton } from "@wanteddev/wds";
+import { IconChevronDown, IconPlus } from "@wanteddev/wds-icon";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import Badge from "@/components/ui/Badge";
+import PostRow from "@/components/list/PostRow";
 import EmptyState from "@/components/ui/EmptyState";
-import MetaItem from "@/components/ui/MetaItem";
-import PressableCard from "@/components/ui/PressableCard";
+import HeaderIconButton from "@/components/ui/HeaderIconButton";
+import ScreenBody from "@/components/ui/ScreenBody";
 import ScreenHeader from "@/components/ui/ScreenHeader";
-import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import Status from "@/components/ui/Status";
 import {
-  INSTRUMENT_LABEL,
-  INSTRUMENT_OPTIONS,
+  useScreenBackdrop,
+  useScreenHeader,
+} from "@/components/ui/useScreenHeader";
+import {
+  formatSlots,
+  getWritableTargets,
+  postTone,
+} from "@/features/board/boardHelpers";
+import BoardFilterSheet, {
+  type BoardFilter,
+  formatBoardFilter,
+} from "@/features/board/components/BoardFilterSheet";
+import { formatRelative } from "@/lib/domain/format";
+import {
   RECRUIT_STATUS_LABEL,
   REGION_LABEL,
   TARGET_TYPE_LABEL,
 } from "@/lib/domain/labels";
-import type {
-  Instrument,
-  RecruitPost,
-  TargetType,
-  WantedSlot,
-} from "@/lib/domain/types";
-import { getPostableTargets, getPosts, getTargetName } from "@/mocks/selectors";
+import type { RecruitPost, TargetType } from "@/lib/domain/types";
+import { getMe, getPosts, getTargetName } from "@/mocks/selectors";
 
-// Figma: 게시판/01 게시판 (101:24187). 게시판 = 모집 공고(GET /recruit-posts).
-// - 탭은 서버 공고 대상(targetType) 그대로 모임|팀 두 개다. Figma의 "공연" 탭은 서버에 공연 공고가 없어 뺐다.
-//   다른 화면(팀 목록의 "팀 찾기" 등)이 ?type=team으로 바로 팀 탭을 열 수 있게 탭 값을 URL에 둔다.
-// - 필터는 서버 목록 필터(status·instrument) 중 Figma 칩 줄에 있는 것 — 전체 · 모집중 · 세션별.
-// - 검색 아이콘은 뺐다(서버에 공고 키워드 검색이 없다).
+// Figma 06 게시판 = 모집 공고(GET /recruit-post). 서버 공고 대상이 모임·팀 둘뿐이라 머리의 글자 탭도
+// "모임 | 팀"이다(?type=group|team — 다른 화면이 팀 탭을 바로 열 수 있게 URL에 둔다).
+// - 필터 줄 "서울 · 모든 세션 ⌄"은 서버 목록 쿼리(region · instrument)를 시트로 고른다. 처음엔 내 지역.
+// - 모집 완료(CLOSED) 글은 흐리게 아래로(getPosts가 정렬). 키워드 검색은 서버에 없어 두지 않는다.
+// - + 는 모집글을 쓸 수 있는 사람(모임장·독립 팀 팀장)에게만 보인다.
 
 type BoardTab = "group" | "team";
-type BoardFilter = "ALL" | "OPEN" | Instrument;
 
 const TAB_TARGET: Record<BoardTab, TargetType> = {
   group: "GROUP",
   team: "TEAM",
 };
 
-const FILTERS: { value: BoardFilter; label: string }[] = [
-  { label: "전체", value: "ALL" },
-  { label: RECRUIT_STATUS_LABEL.OPEN, value: "OPEN" },
-  ...INSTRUMENT_OPTIONS.map((instrument) => ({
-    label: INSTRUMENT_LABEL[instrument],
-    value: instrument,
-  })),
+const TABS = [
+  { label: TARGET_TYPE_LABEL.GROUP, value: "group" },
+  { label: TARGET_TYPE_LABEL.TEAM, value: "team" },
 ];
 
-function formatSlots(slots: WantedSlot[]): string {
-  return slots
-    .map((slot) => `${INSTRUMENT_LABEL[slot.instrument]} ${slot.count}명`)
-    .join(" · ");
-}
-
 function matchesFilter(post: RecruitPost, filter: BoardFilter): boolean {
-  if (filter === "ALL") return true;
-  if (filter === "OPEN") return post.status === "OPEN";
-  return post.wantedSlots.some((slot) => slot.instrument === filter);
+  if (filter.region !== "ALL" && post.region !== filter.region) return false;
+  if (
+    filter.instrument &&
+    !post.wantedSlots.some((slot) => slot.instrument === filter.instrument)
+  ) {
+    return false;
+  }
+  return true;
 }
 
-function emptyTitle(tab: BoardTab, filter: BoardFilter): string {
-  const target = TARGET_TYPE_LABEL[TAB_TARGET[tab]];
-  if (filter === "ALL") return `아직 ${target} 모집 공고가 없어요`;
-  if (filter === "OPEN") return `모집중인 ${target} 공고가 없어요`;
-  return `${INSTRUMENT_LABEL[filter]} 세션을 찾는 ${target} 공고가 없어요`;
-}
-
-function PostCard({ post }: { post: RecruitPost }) {
-  const navigate = useNavigate();
-  const isClosed = post.status === "CLOSED";
-  const targetName = getTargetName(post.targetType, post.targetId);
-
-  return (
-    <PressableCard
-      dimmed={isClosed}
-      onClick={() => navigate(`/board/${post.id}`)}
-    >
-      <div className="flex items-center gap-1.5">
-        <Badge tone={isClosed ? "outline" : "accent"}>
-          {RECRUIT_STATUS_LABEL[post.status]}
-        </Badge>
-        <Typography
-          color="semantic.label.assistive"
-          variant="caption1"
-          weight="bold"
-        >
-          {TARGET_TYPE_LABEL[post.targetType]} 모집
-        </Typography>
-      </div>
-      <Typography color="semantic.label.strong" variant="body1" weight="bold">
-        {post.title}
-      </Typography>
-      <Typography
-        className="line-clamp-2"
-        color="semantic.label.alternative"
-        variant="label2"
-        weight="regular"
-      >
-        {post.body}
-      </Typography>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 pt-0.5">
-        <MetaItem icon={<IconLocation />}>{REGION_LABEL[post.region]}</MetaItem>
-        {targetName && <MetaItem icon={<IconPersons />}>{targetName}</MetaItem>}
-        <MetaItem icon={<IconMusicMicrophone />}>
-          {formatSlots(post.wantedSlots)}
-        </MetaItem>
-      </div>
-    </PressableCard>
-  );
+function postMeta(post: RecruitPost): string {
+  return [
+    formatSlots(post.wantedSlots),
+    getTargetName(post.targetType, post.targetId),
+    REGION_LABEL[post.region],
+    formatRelative(post.createdAt),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function BoardScreen() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab: BoardTab = searchParams.get("type") === "team" ? "team" : "group";
-  const [filter, setFilter] = useState<BoardFilter>("ALL");
-  const canWrite = getPostableTargets().length > 0;
+  const canWrite = getWritableTargets().length > 0;
+
+  const [defaultFilter] = useState<BoardFilter>(() => ({
+    instrument: null,
+    region: getMe().region,
+  }));
+  const [filter, setFilter] = useState(defaultFilter);
+  const [draft, setDraft] = useState(defaultFilter);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useScreenHeader(
-    <ScreenHeader
-      title="게시판"
-      trailing={
-        <TopNavigationButton
-          aria-label="알림"
-          onClick={() => navigate("/notifications")}
-        >
-          <IconBell />
-        </TopNavigationButton>
-      }
-      variant="title"
-    />,
+    useMemo(
+      () => (
+        <ScreenHeader
+          onValueChange={(value) =>
+            // 탭 전환은 같은 목록의 보기 전환이라 히스토리를 쌓지 않는다.
+            setSearchParams({ type: value }, { replace: true })
+          }
+          tabs={TABS}
+          trailing={
+            canWrite ? (
+              <HeaderIconButton
+                icon={<IconPlus />}
+                label="모집글 쓰기"
+                onClick={() => navigate("/board/write")}
+              />
+            ) : undefined
+          }
+          value={tab}
+          variant="tabs"
+        />
+      ),
+      [canWrite, navigate, setSearchParams, tab],
+    ),
   );
+  useScreenBackdrop("stage");
 
-  const posts = getPosts().filter(
-    (post) =>
-      post.targetType === TAB_TARGET[tab] && matchesFilter(post, filter),
+  const tabPosts = getPosts().filter(
+    (post) => post.targetType === TAB_TARGET[tab],
   );
+  const posts = tabPosts.filter((post) => matchesFilter(post, filter));
+
+  const openFilter = () => {
+    setDraft(filter);
+    setFilterOpen(true);
+  };
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden">
-      <Tab
-        // 탭 전환은 같은 목록의 보기 전환이라 히스토리를 쌓지 않는다.
-        onValueChange={(value) =>
-          setSearchParams({ type: value }, { replace: true })
-        }
-        value={tab}
-      >
-        <TabList resize="fill" size="medium">
-          <TabListItem value="group">{TARGET_TYPE_LABEL.GROUP}</TabListItem>
-          <TabListItem value="team">{TARGET_TYPE_LABEL.TEAM}</TabListItem>
-        </TabList>
-      </Tab>
-
-      <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto">
-        <div className="pt-3 pb-1">
-          <Category
-            onValueChange={(value) => setFilter(value as BoardFilter)}
-            value={filter}
+    <>
+      <ScreenBody>
+        <div className="px-5 pb-1">
+          <TextButton
+            color="assistive"
+            onClick={openFilter}
+            size="small"
+            // Figma 필터 줄은 보조 글자 굵기(Regular)라 WDS TextButton의 bold만 덮는다.
+            sx={{ "& > span": { fontWeight: 400 } }}
+            trailingContent={<IconChevronDown />}
           >
-            <CategoryList horizontalPadding size="small">
-              {FILTERS.map((item) => (
-                <CategoryListItem key={item.value} value={item.value}>
-                  {item.label}
-                </CategoryListItem>
-              ))}
-            </CategoryList>
-          </Category>
+            {formatBoardFilter(filter)}
+          </TextButton>
         </div>
 
         {posts.length === 0 ? (
-          <div className="flex flex-1 flex-col justify-center pb-24">
+          <div className="pt-16">
             <EmptyState
               description={
-                filter === "ALL"
-                  ? "새 공고가 올라오면 여기에 보여요"
-                  : "다른 조건으로 바꿔 보세요"
+                tabPosts.length === 0
+                  ? "새 모집글이 올라오면 여기에 보여요"
+                  : "지역이나 세션을 바꿔 보세요"
               }
-              title={emptyTitle(tab, filter)}
+              title={
+                tabPosts.length === 0
+                  ? `아직 ${TARGET_TYPE_LABEL[TAB_TARGET[tab]]} 모집글이 없어요`
+                  : "조건에 맞는 모집글이 없어요"
+              }
             />
           </div>
         ) : (
-          // 글쓰기 버튼이 마지막 카드를 가리지 않게 아래 여백을 넉넉히 둔다.
-          <div className="flex flex-col gap-3 px-5 pt-3 pb-24">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </div>
+          posts.map((post, index) => {
+            const closed = post.status === "CLOSED";
+            return (
+              <PostRow
+                dimmed={closed}
+                divider={index < posts.length - 1}
+                key={post.id}
+                meta={postMeta(post)}
+                onClick={() => navigate(`/board/${post.id}`)}
+                status={
+                  <Status tone={closed ? "neutral" : "progress"}>
+                    {RECRUIT_STATUS_LABEL[post.status]}
+                  </Status>
+                }
+                title={post.title}
+                tone={postTone(post)}
+              />
+            );
+          })
         )}
-      </div>
+      </ScreenBody>
 
-      {/* 공고는 현재 팀장·모임장만 쓸 수 있어서(서버 규칙) 쓸 대상이 없으면 버튼을 숨긴다. */}
-      {canWrite && (
-        <div className="absolute right-5 bottom-5">
-          <Button
-            className="shadow-neon-md"
-            color="primary"
-            leadingContent={<IconPlus />}
-            onClick={() => navigate("/board/write")}
-            size="medium"
-            variant="solid"
-          >
-            글쓰기
-          </Button>
-        </div>
-      )}
-    </div>
+      <BoardFilterSheet
+        draft={draft}
+        onApply={() => setFilter(draft)}
+        onDraftChange={setDraft}
+        onOpenChange={setFilterOpen}
+        onReset={() => setDraft(defaultFilter)}
+        open={filterOpen}
+      />
+    </>
   );
 }
 

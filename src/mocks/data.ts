@@ -1,12 +1,17 @@
+import cityVocalAvatar from "@/assets/avatar/city-vocal.jpg";
 import type {
   AppNotification,
   Bookmark,
   Group,
   GroupMember,
+  GroupRole,
+  Instrument,
   Invitation,
   JoinRequest,
+  Level,
   Notice,
   Performance,
+  PracticeRecording,
   RecruitPost,
   Rehearsal,
   Song,
@@ -15,455 +20,382 @@ import type {
 } from "@/lib/domain/types";
 
 // 백엔드가 붙기 전까지 모든 화면이 함께 쓰는 가짜 데이터. 모양은 서버 DTO(`docs/specs/dto-spec.md`)를
-// 따른다 — 화면이 저마다 상수를 들고 있던 때는 /team/2로 들어가도 1번 팀이 보이는 식으로 라우트와
-// 내용이 어긋났다. 상세 화면은 반드시 라우트 파라미터로 여기서 찾아 그린다.
+// 따르고, 이름·곡은 Figma "UI 최종 디자인"(404:10893) 화면에 나오는 것을 그대로 쓴다.
+// 상세 화면은 반드시 라우트 파라미터로 여기서 찾아 그린다.
 //
-// 데모 흐름이 끊기지 않게 "나"(ME_ID)는 모임장·팀장·일반 멤버·비회원 입장이 골고루 나오도록 배치했다.
+// "나"(ME_ID = 시티보컬)의 입장:
 // - 프로젝트 모임(1): 모임장 → 모임 관리·공지·공연 만들기·셋리스트 확정
-// - 주말 잼 세션(2): 멤버 / 어쿠스틱 나이트(3): 비회원 → 가입 신청
-// - 블루 웨이브(1): 공연 팀 팀장 → 선택곡·셋리스트로 넘기기·팀원 찾기
-// - 나이트 드라이브(2): 독립 팀 멤버
+// - 주말 잼 세션(2): 멤버 — 2026 가을 정기공연(공연 1)을 연다
+// - 록 하우스 서울(3): 운영진 / 어쿠스틱 나이트(4): 비회원 → 가입 신청
+// - 블루 웨이브(1): 공연 1의 공연 팀, 팀장 → 선택곡을 공연에 넘기기
+// - 나이트 드라이브(2): 독립 팀, 팀장 → 팀원 초대·AI 추천
 
 export const ME_ID = 1;
 
-// 합주 일정은 "오늘" 기준으로 만든다 — 날짜를 박아 두면 며칠만 지나도 홈의 오늘 일정이 비어 버린다.
+/** "오늘" 기준 날짜 — 날짜를 박아 두면 며칠만 지나도 홈의 오늘 합주·D-day가 어긋난다. */
 function atDaysFromToday(days: number, hour: number, minute = 0): string {
   const date = new Date();
   date.setDate(date.getDate() + days);
   date.setHours(hour, minute, 0, 0);
-  return date.toISOString();
+  return toLocalIso(date);
+}
+
+function minutesAgo(minutes: number): string {
+  return toLocalIso(new Date(Date.now() - minutes * 60_000));
+}
+
+/** 서버가 주는 형식(오프셋 없는 로컬 시각 "2026-11-12T19:00:00")으로 만든다. */
+function toLocalIso(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+}
+
+function user(
+  id: number,
+  nickname: string,
+  instruments: [Instrument, Level][],
+  extra: Partial<User> = {},
+): User {
+  return {
+    bio: "",
+    genres: ["ROCK"],
+    id,
+    instruments: instruments.map(([instrument, level]) => ({
+      instrument,
+      level,
+    })),
+    isActivityPublic: true,
+    nickname,
+    profileImage: null,
+    region: "SEOUL",
+    ...extra,
+  };
 }
 
 export const USERS: User[] = [
-  {
-    bio: "잘 부탁드립니다.",
-    genres: ["ACOUSTIC", "PUNK"],
-    id: 1,
-    instruments: [
-      { instrument: "KEY", level: "BEGINNER" },
-      { instrument: "AC_GT", level: "NOVICE" },
+  user(
+    1,
+    "시티보컬",
+    [
+      ["VOCAL", "INTERMEDIATE"],
+      ["EL_GT", "NOVICE"],
     ],
-    isActivityPublic: true,
-    nickname: "김광철",
-    profileImage: null,
-    region: "SEOUL",
-  },
-  {
-    bio: "보컬 5년차, 인디 록 좋아해요.",
-    genres: ["INDIE", "ROCK"],
-    id: 2,
-    instruments: [{ instrument: "VOCAL", level: "INTERMEDIATE" }],
-    isActivityPublic: true,
-    nickname: "이보컬",
-    profileImage: null,
-    region: "SEOUL",
-  },
-  {
-    bio: "메탈부터 재즈까지 다 쳐요.",
-    genres: ["METAL", "JAZZ"],
-    id: 3,
-    instruments: [{ instrument: "DRUM", level: "ADVANCED" }],
-    isActivityPublic: true,
-    nickname: "박드럼",
-    profileImage: null,
-    region: "SEOUL",
-  },
-  {
-    bio: "그루브 담당입니다.",
-    genres: ["ROCK", "POP"],
-    id: 4,
-    instruments: [{ instrument: "BASS", level: "INTERMEDIATE" }],
-    isActivityPublic: true,
-    nickname: "박베이스",
-    profileImage: null,
+    {
+      bio: "퇴근하고 시티팝 부르는 보컬이에요.",
+      genres: ["POP", "RNB"],
+      profileImage: cityVocalAvatar,
+    },
+  ),
+  user(
+    2,
+    "새벽기타",
+    [
+      ["EL_GT", "INTERMEDIATE"],
+      ["AC_GT", "NOVICE"],
+    ],
+    { bio: "주말엔 합주실에 살아요. 펑크랑 이모 좋아해요.", genres: ["PUNK"] },
+  ),
+  user(
+    3,
+    "록스타",
+    [
+      ["EL_GT", "ADVANCED"],
+      ["VOCAL", "INTERMEDIATE"],
+    ],
+    { bio: "주말 잼 세션을 운영해요. 펑크·록 위주로 합주해요." },
+  ),
+  user(4, "낮은음자리", [["BASS", "INTERMEDIATE"]], {
+    bio: "펑크랑 이모 좋아하는 베이스예요.",
+    genres: ["PUNK", "ROCK"],
+  }),
+  user(5, "드럼치는곰", [["DRUM", "INTERMEDIATE"]], {
+    bio: "주말 합주 가능해요.",
+  }),
+  user(6, "키보드윤", [["KEY", "INTERMEDIATE"]], {
+    bio: "R&B를 즐겨 들어요.",
+    genres: ["RNB", "POP"],
     region: "GYEONGGI",
-  },
-  {
-    bio: "",
-    genres: ["BALLAD"],
-    id: 5,
-    instruments: [{ instrument: "VOCAL", level: "NOVICE" }],
-    isActivityPublic: false,
-    nickname: "강보컬",
-    profileImage: null,
-    region: "SEOUL",
-  },
-  {
-    bio: "퇴근 후 시티팝 합주해요.",
-    genres: ["POP", "ROCK"],
-    id: 6,
-    instruments: [{ instrument: "EL_GT", level: "ADVANCED" }],
-    isActivityPublic: true,
-    nickname: "정일렉",
-    profileImage: null,
-    region: "SEOUL",
-  },
-  {
-    bio: "어쿠스틱 기타 치고 노래해요.",
+  }),
+  user(7, "그루브정", [["BASS", "ADVANCED"]], { genres: ["POP"] }),
+  user(8, "하이햇", [["DRUM", "NOVICE"]], { genres: ["INDIE"] }),
+  user(9, "어쿠스틱오", [["AC_GT", "INTERMEDIATE"]], {
     genres: ["ACOUSTIC"],
-    id: 7,
-    instruments: [
-      { instrument: "AC_GT", level: "NOVICE" },
-      { instrument: "VOCAL", level: "BEGINNER" },
-    ],
-    isActivityPublic: true,
-    nickname: "오어쿠",
-    profileImage: null,
-    region: "SEOUL",
-  },
-  {
-    bio: "주말마다 잼 세션 엽니다.",
-    genres: ["ROCK"],
-    id: 8,
-    instruments: [{ instrument: "EL_GT", level: "INTERMEDIATE" }],
-    isActivityPublic: true,
-    nickname: "김모임",
-    profileImage: null,
-    region: "SEOUL",
-  },
-  {
-    bio: "",
-    genres: ["ACOUSTIC", "INDIE"],
-    id: 9,
-    instruments: [{ instrument: "KEY", level: "ADVANCED" }],
-    isActivityPublic: true,
-    nickname: "한건반",
-    profileImage: null,
-    region: "GYEONGGI",
-  },
+  }),
+  user(10, "블루노트", [["VOCAL", "ADVANCED"]], { genres: ["JAZZ"] }),
+  user(11, "펑크소년", [["EL_GT", "NOVICE"]], { genres: ["PUNK"] }),
+  user(12, "건반요정", [["KEY", "NOVICE"]], { genres: ["BALLAD"] }),
+  user(13, "리듬박", [["DRUM", "ADVANCED"]], { isActivityPublic: false }),
+  user(14, "어반보이스", [["VOCAL", "NOVICE"]], { genres: ["HIPHOP"] }),
 ];
+
+function findUser(id: number): User {
+  return USERS.find((u) => u.id === id) as User;
+}
 
 export const GROUPS: Group[] = [
   {
     coverImage: null,
-    createdAt: "2026-07-10T12:00:00",
-    description: "좋아하는 음악으로 함께 무대를 만드는 모임",
+    createdAt: "2025-03-02T12:00:00",
+    description: "좋아하는 음악으로 함께 무대를 만드는 모임이에요.",
     id: 1,
-    memberCount: 7,
+    memberCount: 12,
     myRole: "OWNER",
     name: "프로젝트 모임",
     ownerId: 1,
-    region: "SEOUL",
-    type: "PROJECT",
-  },
-  {
-    coverImage: null,
-    createdAt: "2026-05-02T12:00:00",
-    description: "매주 새로운 합주를 즐기는 자유 세션",
-    id: 2,
-    memberCount: 3,
-    myRole: "MEMBER",
-    name: "주말 잼 세션",
-    ownerId: 8,
     region: "SEOUL",
     type: "REGULAR",
   },
   {
     coverImage: null,
-    createdAt: "2026-08-21T12:00:00",
-    description: "작은 공연을 준비하는 어쿠스틱 모임",
+    createdAt: "2024-04-06T12:00:00",
+    description: "매주 토요일 오후 2시, 마포 합주실 A에서 합주해요.",
+    id: 2,
+    memberCount: 8,
+    myRole: "MEMBER",
+    name: "주말 잼 세션",
+    ownerId: 3,
+    region: "SEOUL",
+    type: "REGULAR",
+  },
+  {
+    coverImage: null,
+    createdAt: "2025-09-15T12:00:00",
+    description: "서울에서 록 공연을 함께 준비하는 프로젝트 모임이에요.",
     id: 3,
-    memberCount: 3,
+    memberCount: 23,
+    myRole: "MANAGER",
+    name: "록 하우스 서울",
+    ownerId: 10,
+    region: "SEOUL",
+    type: "PROJECT",
+  },
+  {
+    // 아직 신청하지 않은 비회원 모임 — 가입 신청 흐름을 시연한다.
+    coverImage: null,
+    createdAt: "2026-08-21T12:00:00",
+    description: "작은 공연을 준비하는 어쿠스틱 모임이에요.",
+    id: 4,
+    memberCount: 6,
     myRole: null,
     name: "어쿠스틱 나이트",
     ownerId: 9,
     region: "GYEONGGI",
     type: "REGULAR",
   },
-  {
-    // 아직 신청하지 않은 비회원 모임 — 모임 홈의 "가입 신청하기" 흐름을 시연한다.
-    coverImage: null,
-    createdAt: "2026-09-15T12:00:00",
-    description: "블루스와 록을 좋아하는 신촌 대학생 연합 동아리",
-    id: 4,
-    memberCount: 2,
-    myRole: null,
-    name: "신촌 블루스 클럽",
-    ownerId: 3,
-    region: "SEOUL",
-    type: "REGULAR",
-  },
 ];
+
+function members(
+  ownerId: number,
+  userIds: number[],
+  joinedAt: string,
+  roles: Record<number, GroupRole> = {},
+): GroupMember[] {
+  return userIds.map((userId) => {
+    const u = findUser(userId);
+    return {
+      instruments: u.instruments,
+      joinedAt,
+      nickname: u.nickname,
+      profileImage: u.profileImage,
+      role: userId === ownerId ? "OWNER" : (roles[userId] ?? "MEMBER"),
+      userId,
+    };
+  });
+}
 
 export const GROUP_MEMBERS: Record<number, GroupMember[]> = {
-  1: [1, 2, 3, 4, 5, 6, 7].map((userId) => {
-    const user = USERS.find((u) => u.id === userId) as User;
-    return {
-      instruments: user.instruments,
-      joinedAt: "2026-07-10T12:00:00",
-      nickname: user.nickname,
-      profileImage: null,
-      role: userId === 1 ? "OWNER" : "MEMBER",
-      userId,
-    };
+  1: members(
+    1,
+    [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14],
+    "2025-03-02T12:00:00",
+  ),
+  2: members(3, [3, 1, 2, 4, 5, 6, 7, 8], "2024-04-06T12:00:00"),
+  3: members(10, [10, 1, 3, 11, 13, 14], "2025-09-15T12:00:00", {
+    1: "MANAGER",
   }),
-  2: [8, 1, 6].map((userId) => {
-    const user = USERS.find((u) => u.id === userId) as User;
-    return {
-      instruments: user.instruments,
-      joinedAt: "2026-05-02T12:00:00",
-      nickname: user.nickname,
-      profileImage: null,
-      role: userId === 8 ? "OWNER" : "MEMBER",
-      userId,
-    };
-  }),
-  3: [9, 7, 2].map((userId) => {
-    const user = USERS.find((u) => u.id === userId) as User;
-    return {
-      instruments: user.instruments,
-      joinedAt: "2026-08-21T12:00:00",
-      nickname: user.nickname,
-      profileImage: null,
-      role: userId === 9 ? "OWNER" : "MEMBER",
-      userId,
-    };
-  }),
-  4: [3, 4].map((userId) => {
-    const user = USERS.find((u) => u.id === userId) as User;
-    return {
-      instruments: user.instruments,
-      joinedAt: "2026-09-15T12:00:00",
-      nickname: user.nickname,
-      profileImage: null,
-      role: userId === 3 ? "OWNER" : "MEMBER",
-      userId,
-    };
-  }),
+  4: members(9, [9, 2, 6, 7, 12, 13], "2026-08-21T12:00:00"),
 };
 
+/** 공지 목록(NoticeSummaryResponse)에는 작성자가 없다 — 화면은 날짜만 보여 준다. */
 export const NOTICES: Notice[] = [
   {
-    body: "12월 12일 홍대 롤링홀에서 가을 정기공연을 진행합니다. 공연 정보에서 공연 팀을 만들어 참가해 주세요. 팀별 선택곡은 11월 30일까지 셋리스트로 넘겨 주세요.",
-    createdAt: "2026-11-02T09:00:00",
-    groupId: 1,
+    body: "가을 정기공연 순서가 나왔어요. 블루 웨이브 → 새벽 세션 → 펑크 클럽 순이고, 팀마다 20분이에요.",
+    createdAt: "2026-11-12T09:00:00",
+    groupId: 2,
     id: 1,
     isPinned: true,
-    title: "가을 정기공연 참가 신청 안내",
+    title: "11월 정기 공연 순서 나왔어요",
   },
   {
-    body: "11월부터 합주실 이용 시간이 저녁 7시~11시로 바뀝니다.",
-    createdAt: "2026-10-28T09:00:00",
-    groupId: 1,
+    body: "11월부터 합주실 이용 시간이 저녁 7시~11시로 바뀌어요.",
+    createdAt: "2026-11-03T09:00:00",
+    groupId: 2,
     id: 2,
     isPinned: false,
-    title: "11월 합주실 이용 시간 변경",
+    title: "합주실 이용 시간이 바뀌었어요",
   },
   {
-    body: "이번 주 잼 세션은 토요일 오후 2시에 합정에서 열려요.",
-    createdAt: "2026-11-01T09:00:00",
-    groupId: 2,
+    body: "봄날 록 페스티벌 참가 팀을 모아요. 공연 정보에서 공연 팀을 만들어 주세요.",
+    createdAt: "2026-11-05T09:00:00",
+    groupId: 1,
     id: 3,
     isPinned: true,
-    title: "이번 주 잼 세션 안내",
+    title: "봄 페스티벌 참가 팀 모집",
   },
 ];
 
-export const SONGS: Song[] = [
-  {
-    artist: "Radiohead",
-    bpm: 87,
-    difficulty: [
-      { level: "INTERMEDIATE", part: "VOCAL" },
-      { level: "NOVICE", part: "AC_GT" },
-    ],
-    genre: "ROCK",
-    id: 101,
-    songKey: "A",
-    title: "High and Dry",
-  },
-  {
-    artist: "검정치마",
-    bpm: 120,
+function song(
+  id: number,
+  title: string,
+  artist: string,
+  genre: Song["genre"],
+  bpm: number,
+  songKey = "C",
+): Song {
+  return {
+    artist,
+    bpm,
     difficulty: [
       { level: "NOVICE", part: "VOCAL" },
       { level: "INTERMEDIATE", part: "EL_GT" },
-    ],
-    genre: "INDIE",
-    id: 102,
-    songKey: "E",
-    title: "Antifreeze",
-  },
-  {
-    artist: "CORTIS",
-    bpm: 112,
-    difficulty: [{ level: "INTERMEDIATE", part: "VOCAL" }],
-    genre: "POP",
-    id: 103,
-    songKey: "C#m",
-    title: "BIRDS",
-  },
-  {
-    artist: "DAY6",
-    bpm: 131,
-    difficulty: [
-      { level: "INTERMEDIATE", part: "DRUM" },
       { level: "NOVICE", part: "BASS" },
+      { level: "INTERMEDIATE", part: "DRUM" },
     ],
-    genre: "ROCK",
-    id: 104,
-    songKey: "D",
-    title: "한 페이지가 될 수 있게",
-  },
-  {
-    artist: "Oasis",
-    bpm: 82,
-    difficulty: [{ level: "NOVICE", part: "AC_GT" }],
-    genre: "ROCK",
-    id: 105,
-    songKey: "C",
-    title: "Don't Look Back in Anger",
-  },
-  {
-    artist: "무한궤도",
-    bpm: 138,
-    difficulty: [{ level: "INTERMEDIATE", part: "KEY" }],
-    genre: "ROCK",
-    id: 106,
-    songKey: "F",
-    title: "그대에게",
-  },
-  {
-    artist: "Nirvana",
-    bpm: 117,
-    difficulty: [{ level: "ADVANCED", part: "DRUM" }],
-    genre: "ROCK",
-    id: 107,
-    songKey: "Fm",
-    title: "Smells Like Teen Spirit",
-  },
-  {
-    artist: "윤하",
-    bpm: 128,
-    difficulty: [{ level: "ADVANCED", part: "VOCAL" }],
-    genre: "POP",
-    id: 108,
-    songKey: "E",
-    title: "사건의 지평선",
-  },
+    genre,
+    id,
+    songKey,
+    title,
+  };
+}
+
+export const SONGS: Song[] = [
+  song(101, "Plastic Love", "Mariya Takeuchi", "POP", 104, "Am"),
+  song(102, "Hype Boy", "NewJeans", "POP", 100, "E"),
+  song(103, "Antifreeze", "검정치마", "INDIE", 120, "D"),
+  song(104, "Basket Case", "Green Day", "PUNK", 172, "Eb"),
+  song(105, "Plastic Hearts", "Miley Cyrus", "POP", 122, "G"),
+  song(106, "Plastic Beach", "Gorillaz", "ROCK", 110, "C"),
+  song(107, "Plastic", "Moses Sumney", "INDIE", 80, "F"),
+  song(108, "사건의 지평선", "윤하", "BALLAD", 128, "E"),
+  song(109, "Don't Look Back in Anger", "Oasis", "ROCK", 82, "C"),
+  song(110, "Creep", "Radiohead", "ROCK", 92, "G"),
+  song(111, "American Idiot", "Green Day", "PUNK", 186, "Ab"),
+  song(112, "그대에게", "무한궤도", "ROCK", 140, "D"),
 ];
+
+function teamMember(
+  userId: number,
+  instrument: Instrument,
+  role: "LEADER" | "MEMBER" = "MEMBER",
+) {
+  const u = findUser(userId);
+  return {
+    instrument,
+    role,
+    user: { id: u.id, nickname: u.nickname, profileImage: u.profileImage },
+  };
+}
 
 export const TEAMS: Team[] = [
   {
-    description: "인디 록 사운드를 함께 만드는 밴드",
-    genres: ["INDIE", "ROCK"],
+    description: "가을 정기공연을 준비하는 팀이에요.",
+    genres: ["POP", "ROCK"],
     id: 1,
     leaderId: 1,
     members: [
-      {
-        instrument: "KEY",
-        role: "LEADER",
-        user: { id: 1, nickname: "김광철", profileImage: null },
-      },
-      {
-        instrument: "VOCAL",
-        role: "MEMBER",
-        user: { id: 2, nickname: "이보컬", profileImage: null },
-      },
-      {
-        instrument: "BASS",
-        role: "MEMBER",
-        user: { id: 4, nickname: "박베이스", profileImage: null },
-      },
-      {
-        instrument: "EL_GT",
-        role: "MEMBER",
-        user: { id: 6, nickname: "정일렉", profileImage: null },
-      },
+      teamMember(1, "VOCAL", "LEADER"),
+      teamMember(2, "EL_GT"),
+      teamMember(4, "BASS"),
+      teamMember(5, "DRUM"),
     ],
     myRole: "LEADER",
     name: "블루 웨이브",
     performanceId: 1,
     region: "SEOUL",
-    songIds: [101, 102, 105],
+    songIds: [101, 102, 103, 104],
   },
   {
-    description: "퇴근 후 시티팝을 연주하는 직장인 밴드",
-    genres: ["POP"],
+    description: "밤에 듣기 좋은 팝·R&B를 합주해요.",
+    genres: ["POP", "RNB"],
     id: 2,
-    leaderId: 6,
-    members: [
-      {
-        instrument: "EL_GT",
-        role: "LEADER",
-        user: { id: 6, nickname: "정일렉", profileImage: null },
-      },
-      {
-        instrument: "KEY",
-        role: "MEMBER",
-        user: { id: 1, nickname: "김광철", profileImage: null },
-      },
-      {
-        instrument: "DRUM",
-        role: "MEMBER",
-        user: { id: 3, nickname: "박드럼", profileImage: null },
-      },
-    ],
-    myRole: "MEMBER",
+    leaderId: 1,
+    members: [teamMember(1, "VOCAL", "LEADER"), teamMember(2, "AC_GT")],
+    myRole: "LEADER",
     name: "나이트 드라이브",
     performanceId: null,
     region: "SEOUL",
-    songIds: [103],
+    songIds: [101, 102, 103, 104],
   },
   {
-    description: "공연을 준비하는 하드 록 밴드",
-    genres: ["ROCK", "METAL"],
+    description: "새벽 감성 록 밴드예요.",
+    genres: ["ROCK"],
     id: 3,
-    leaderId: 4,
+    leaderId: 3,
     members: [
-      {
-        instrument: "BASS",
-        role: "LEADER",
-        user: { id: 4, nickname: "박베이스", profileImage: null },
-      },
-      {
-        instrument: "VOCAL",
-        role: "MEMBER",
-        user: { id: 5, nickname: "강보컬", profileImage: null },
-      },
-      {
-        instrument: "DRUM",
-        role: "MEMBER",
-        user: { id: 3, nickname: "박드럼", profileImage: null },
-      },
+      teamMember(3, "EL_GT", "LEADER"),
+      teamMember(6, "KEY"),
+      teamMember(7, "BASS"),
+      teamMember(8, "DRUM"),
+      teamMember(10, "VOCAL"),
     ],
     myRole: null,
-    name: "라우드 룸",
+    name: "새벽 세션",
     performanceId: 1,
     region: "SEOUL",
-    songIds: [104, 107],
+    songIds: [109, 110, 112],
+  },
+  {
+    description: "빠른 펑크만 해요.",
+    genres: ["PUNK"],
+    id: 4,
+    leaderId: 11,
+    members: [
+      teamMember(11, "EL_GT", "LEADER"),
+      teamMember(14, "VOCAL"),
+      teamMember(4, "BASS"),
+      teamMember(13, "DRUM"),
+    ],
+    myRole: null,
+    name: "펑크 클럽",
+    performanceId: 1,
+    region: "SEOUL",
+    songIds: [111, 104],
   },
 ];
 
 export const PERFORMANCES: Performance[] = [
   {
     description:
-      "1년에 한 번 하는 정기공연입니다. 공연 팀을 만들어 참가하고, 팀별로 고른 곡을 셋리스트로 넘겨 주세요.",
-    groupId: 1,
+      "한 해 동안 합주한 곡으로 무대에 올라요.\n팀마다 3곡, 20분씩이에요. 리허설은 당일 15시부터예요.",
+    groupId: 2,
     id: 1,
-    performedAt: "2026-12-12T18:00:00",
+    performedAt: atDaysFromToday(8, 18),
     posterImage: null,
     setlist: [
       { songId: 101, sortOrder: null, teamId: 1 },
       { songId: 102, sortOrder: null, teamId: 1 },
-      { songId: 104, sortOrder: null, teamId: 3 },
-      { songId: 107, sortOrder: null, teamId: 3 },
+      { songId: 103, sortOrder: null, teamId: 1 },
+      { songId: 109, sortOrder: null, teamId: 3 },
+      { songId: 110, sortOrder: null, teamId: 3 },
+      { songId: 112, sortOrder: null, teamId: 3 },
+      { songId: 111, sortOrder: null, teamId: 4 },
+      { songId: 104, sortOrder: null, teamId: 4 },
     ],
     setlistConfirmed: false,
-    status: "RECRUITING",
-    teamIds: [1, 3],
+    status: "PLANNED",
+    teamIds: [1, 3, 4],
     title: "2026 가을 정기공연",
     venue: "홍대 롤링홀",
   },
   {
-    description: "봄맞이 야외 록 페스티벌 무대입니다.",
+    description: "봄맞이 야외 록 페스티벌 무대예요.",
     groupId: 1,
     id: 2,
     performedAt: "2027-03-21T17:00:00",
     posterImage: null,
     setlist: [],
     setlistConfirmed: false,
-    status: "PLANNED",
+    status: "RECRUITING",
     teamIds: [],
     title: "봄날 록 페스티벌",
     venue: "난지 한강공원",
@@ -474,10 +406,7 @@ export const PERFORMANCES: Performance[] = [
     id: 3,
     performedAt: "2026-08-15T19:00:00",
     posterImage: null,
-    setlist: [
-      { songId: 105, sortOrder: 1, teamId: 1 },
-      { songId: 106, sortOrder: 2, teamId: 1 },
-    ],
+    setlist: [{ songId: 108, sortOrder: 1, teamId: 1 }],
     setlistConfirmed: true,
     status: "DONE",
     teamIds: [],
@@ -486,84 +415,86 @@ export const PERFORMANCES: Performance[] = [
   },
 ];
 
+/** 모임 공고는 모임장(모임 1은 나), 팀 공고는 팀장이 쓴다. 공연 팀은 공고를 올릴 수 없다. */
 export const RECRUIT_POSTS: RecruitPost[] = [
   {
-    authorId: 9,
-    body: "홍대에서 활동해요. 인디 록과 얼터너티브를 좋아하는 분이면 좋아요. 실력보다 꾸준히 함께할 수 있는 분을 찾고 있어요!",
-    createdAt: "2026-11-04T10:00:00",
+    authorId: 3,
+    body: "매주 토요일 오후 2시, 마포 합주실 A에서 합주해요.\n그린데이, 블링크-182 같은 펑크 곡을 주로 하고요.\n밴드가 처음이어도 괜찮으니 편하게 지원해 주세요.",
+    createdAt: atDaysFromToday(-2, 10),
     id: 1,
     region: "SEOUL",
     status: "OPEN",
-    targetId: 3,
+    targetId: 2,
     targetType: "GROUP",
-    title: "홍대 주말 합주 보컬을 찾고 있어요",
-    wantedSlots: [{ appliedCount: 2, count: 1, instrument: "VOCAL" }],
+    title: "주말 잼 세션에서 드럼을 찾아요",
+    wantedSlots: [{ appliedCount: 2, count: 1, instrument: "DRUM" }],
   },
   {
-    authorId: 6,
-    body: "합정에서 활동해요. 수요일 저녁, 부담 없이 오래 함께할 베이스를 찾아요.",
-    createdAt: "2026-11-03T21:00:00",
+    authorId: 1,
+    body: "봄 페스티벌을 같이 준비할 베이스를 찾아요. 주 1회 홍대에서 합주해요.",
+    createdAt: atDaysFromToday(-3, 10),
     id: 2,
+    region: "SEOUL",
+    status: "OPEN",
+    targetId: 1,
+    targetType: "GROUP",
+    title: "정기공연 같이 준비할 베이스 구해요",
+    wantedSlots: [{ appliedCount: 1, count: 1, instrument: "BASS" }],
+  },
+  {
+    authorId: 1,
+    body: "홍대 근처에서 주말마다 합주해요. 시티팝·R&B를 주로 하고, 처음 맞춰 보는 분도 괜찮아요.",
+    createdAt: atDaysFromToday(-4, 21),
+    id: 4,
     region: "SEOUL",
     status: "OPEN",
     targetId: 2,
     targetType: "TEAM",
-    title: "합정 퇴근 후 베이스 세션 구해요",
+    title: "주말 합주할 베이스를 찾아요",
     wantedSlots: [{ appliedCount: 1, count: 1, instrument: "BASS" }],
   },
   {
-    authorId: 4,
-    body: "신촌에서 서로의 데모를 듣고 편곡하는 자작곡 스터디예요.",
-    createdAt: "2026-11-01T15:00:00",
+    authorId: 10,
+    body: "록 공연을 처음 해 보는 분도 괜찮아요. 매달 한 번 공연해요.",
+    createdAt: atDaysFromToday(-7, 15),
     id: 3,
     region: "SEOUL",
     status: "OPEN",
     targetId: 3,
-    targetType: "TEAM",
-    title: "신촌 자작곡 스터디 멤버 구해요",
+    targetType: "GROUP",
+    title: "밴드 처음이어도 괜찮아요, 보컬 모집",
     wantedSlots: [
-      { appliedCount: 0, count: 1, instrument: "KEY" },
-      { appliedCount: 3, count: 1, instrument: "EL_GT" },
+      { appliedCount: 0, count: 2, instrument: "VOCAL" },
+      { appliedCount: 1, count: 1, instrument: "KEY" },
     ],
   },
   {
-    authorId: 1,
-    body: "가을 정기공연에 함께 설 드러머를 찾아요. 주 1회 홍대에서 합주합니다.",
-    createdAt: "2026-10-30T09:00:00",
-    id: 4,
-    region: "SEOUL",
-    status: "OPEN",
-    targetId: 1,
-    targetType: "TEAM",
-    title: "가을 정기공연 드럼 구해요",
-    wantedSlots: [{ appliedCount: 1, count: 1, instrument: "DRUM" }],
-  },
-  {
-    authorId: 3,
-    body: "신촌에서 매주 금요일 블루스 잼을 해요. 모임에 들어오면 정기공연 무대에도 설 수 있어요.",
-    createdAt: "2026-11-05T18:00:00",
-    id: 6,
-    region: "SEOUL",
+    // 내가 아직 들어가지 않은 모임의 공고 — 모집글 상세에서 지원하기 흐름을 시연한다.
+    authorId: 9,
+    body: "경기 남부에서 활동하는 어쿠스틱 모임이에요.\n한 달에 한 번 작은 카페 공연을 해요. 노래하는 분도 환영해요.",
+    createdAt: atDaysFromToday(-10, 9),
+    id: 5,
+    region: "GYEONGGI",
     status: "OPEN",
     targetId: 4,
     targetType: "GROUP",
-    title: "신촌 블루스 클럽 신입 모집",
+    title: "어쿠스틱 나이트 새 멤버 모집",
     wantedSlots: [
-      { appliedCount: 1, count: 2, instrument: "EL_GT" },
-      { appliedCount: 0, count: 1, instrument: "KEY" },
+      { appliedCount: 0, count: 2, instrument: "AC_GT" },
+      { appliedCount: 1, count: 1, instrument: "VOCAL" },
     ],
   },
   {
-    authorId: 8,
-    body: "망원에서 매주 모이는 잼 세션 모임이에요.",
-    createdAt: "2026-10-20T09:00:00",
-    id: 5,
+    authorId: 10,
+    body: "지난 공연을 함께할 키보드를 찾았어요. 감사합니다!",
+    createdAt: atDaysFromToday(-25, 9),
+    id: 6,
     region: "SEOUL",
     status: "CLOSED",
-    targetId: 2,
+    targetId: 3,
     targetType: "GROUP",
-    title: "망원 주말 잼 세션 멤버 모집",
-    wantedSlots: [{ appliedCount: 0, count: 2, instrument: "VOCAL" }],
+    title: "록 하우스 서울 키보드 모집",
+    wantedSlots: [{ appliedCount: 0, count: 1, instrument: "KEY" }],
   },
 ];
 
@@ -571,164 +502,259 @@ export const REHEARSALS: Rehearsal[] = [
   {
     endsAt: atDaysFromToday(0, 21),
     id: 1,
+    memo: "공연 셋리스트 3곡 처음부터 끝까지",
     place: "합주실 A",
     startsAt: atDaysFromToday(0, 19),
     teamId: 1,
-    title: "밴드 합주",
+    title: "블루 웨이브 합주",
   },
   {
-    endsAt: atDaysFromToday(3, 22),
+    endsAt: atDaysFromToday(2, 16),
     id: 2,
-    place: "홍대 연습실 A",
-    startsAt: atDaysFromToday(3, 20),
-    teamId: 1,
-    title: "정기공연 리허설",
+    memo: "",
+    place: "연습실 B",
+    startsAt: atDaysFromToday(2, 14),
+    teamId: 2,
+    title: "나이트 드라이브 합주",
   },
   {
-    endsAt: atDaysFromToday(8, 17),
+    endsAt: atDaysFromToday(5, 21),
     id: 3,
-    place: "합정 모여락 스튜디오",
-    startsAt: atDaysFromToday(8, 14),
-    teamId: 2,
-    title: "주말 합주",
+    memo: "",
+    place: "합주실 A",
+    startsAt: atDaysFromToday(5, 19),
+    teamId: 1,
+    title: "블루 웨이브 합주",
   },
 ];
 
-/** 내가 낸 가입 신청 + 내가 관리하는 대상(모임 1·팀 1)으로 들어온 신청 */
 export const JOIN_REQUESTS: JoinRequest[] = [
   {
+    // 내 신청 — 같은 모임(주말 잼 세션)의 다른 공연 팀에 일렉 기타로
     applicantId: 1,
-    createdAt: "2026-11-05T10:00:00",
+    createdAt: atDaysFromToday(-1, 10),
     id: 1,
-    instrument: null,
-    message: "보컬은 아니지만 키보드로 함께하고 싶어요.",
-    recruitPostId: 1,
-    status: "PENDING",
-    targetId: 3,
-    targetType: "GROUP",
-  },
-  {
-    applicantId: 1,
-    createdAt: "2026-10-25T10:00:00",
-    id: 2,
-    instrument: "KEY",
-    message: "",
-    recruitPostId: 3,
-    status: "REJECTED",
-    targetId: 3,
-    targetType: "TEAM",
-  },
-  {
-    applicantId: 9,
-    createdAt: "2026-11-06T09:00:00",
-    id: 3,
-    instrument: null,
-    message: "어쿠스틱 나이트에서 활동 중인데 함께 공연하고 싶어요.",
+    instrument: "EL_GT",
+    message: "일렉 기타로 함께하고 싶어요.",
     recruitPostId: null,
     status: "PENDING",
-    targetId: 1,
-    targetType: "GROUP",
+    targetId: 3,
+    targetType: "TEAM",
   },
   {
-    applicantId: 3,
-    createdAt: "2026-11-06T08:00:00",
-    id: 4,
-    instrument: "DRUM",
-    message: "드럼 5년 쳤습니다.",
+    // 받은 신청 — 내 팀(나이트 드라이브) 베이스 모집에 지원
+    applicantId: 2,
+    createdAt: minutesAgo(10),
+    id: 2,
+    instrument: "BASS",
+    message: "베이스도 칠 수 있어요!",
     recruitPostId: 4,
     status: "PENDING",
-    targetId: 1,
+    targetId: 2,
     targetType: "TEAM",
+  },
+  {
+    // 받은 신청 — 내 모임(프로젝트 모임)
+    applicantId: 7,
+    createdAt: atDaysFromToday(-2, 18),
+    id: 3,
+    instrument: null,
+    message: "봄 페스티벌 같이 준비하고 싶어요.",
+    recruitPostId: 2,
+    status: "PENDING",
+    targetId: 1,
+    targetType: "GROUP",
   },
 ];
 
 export const INVITATIONS: Invitation[] = [
   {
-    createdAt: "2026-11-06T07:50:00",
+    // 받은 초대
+    createdAt: minutesAgo(120),
     id: 1,
-    instrument: "KEY",
+    instrument: "EL_GT",
     inviteeId: 1,
-    inviterId: 4,
-    message: "키보드 자리가 비어 있어요, 같이 하실래요?",
+    inviterId: 11,
+    message: "",
     status: "PENDING",
-    targetId: 3,
+    targetId: 4,
     targetType: "TEAM",
   },
   {
-    createdAt: "2026-11-04T07:50:00",
+    // 보낸 초대 — 나이트 드라이브 팀장으로
+    createdAt: atDaysFromToday(-1, 20),
     id: 2,
-    instrument: "AC_GT",
+    instrument: "BASS",
     inviteeId: 7,
     inviterId: 1,
-    message: "어쿠스틱 편곡에 함께해 주세요!",
+    message: "",
     status: "PENDING",
-    targetId: 1,
+    targetId: 2,
     targetType: "TEAM",
   },
 ];
 
+/** NotificationResponse. message는 서버(발행하는 쪽)가 만든 문장 그대로다. */
 export const NOTIFICATIONS: AppNotification[] = [
   {
-    createdAt: "2026-11-06T09:00:00",
+    createdAt: minutesAgo(10),
     id: 1,
     isRead: false,
-    message: "프로젝트 모임에 가입 신청이 왔어요",
-    targetId: 3,
-    targetType: "JOIN_REQUEST",
-    type: "RECRUIT_POST_APPLIED",
-  },
-  {
-    createdAt: "2026-11-06T08:00:00",
-    id: 2,
-    isRead: false,
-    message: "블루 웨이브에 드럼 지원이 왔어요",
-    targetId: 4,
+    message: "새벽기타님이 베이스 모집에 지원했어요",
+    targetId: 2,
     targetType: "JOIN_REQUEST",
     type: "TEAM_APPLY",
   },
   {
-    createdAt: "2026-11-06T07:50:00",
-    id: 3,
+    createdAt: minutesAgo(60),
+    id: 2,
     isRead: false,
-    message: "라우드 룸에서 키보드 세션으로 초대했어요",
-    targetId: 1,
-    targetType: "INVITATION",
-    type: "TEAM_INVITE",
-  },
-  {
-    createdAt: "2026-11-05T12:00:00",
-    id: 4,
-    isRead: true,
-    message: "프로젝트 모임에 새 공연이 등록됐어요",
-    targetId: 2,
-    targetType: "PERFORMANCE",
-    type: "PERFORMANCE_CREATED",
-  },
-  {
-    createdAt: "2026-11-02T09:00:00",
-    id: 5,
-    isRead: true,
-    message: "프로젝트 모임에 새 공지가 올라왔어요",
+    message: "주말 잼 세션에 새 공지가 올라왔어요",
     targetId: 1,
     targetType: "NOTICE",
     type: "NOTICE_CREATED",
   },
   {
-    createdAt: "2026-10-26T09:00:00",
-    id: 6,
+    createdAt: minutesAgo(120),
+    id: 3,
+    isRead: false,
+    message: "펑크 클럽에서 일렉 기타로 초대했어요",
+    targetId: 1,
+    targetType: "INVITATION",
+    type: "TEAM_INVITE",
+  },
+  {
+    createdAt: minutesAgo(60 * 24 * 2),
+    id: 4,
     isRead: true,
-    message: "주말 잼 세션 가입이 승인됐어요",
-    targetId: 2,
-    targetType: "GROUP",
+    message: "블루 웨이브 팀 지원이 승인됐어요",
+    targetId: 1,
+    targetType: "TEAM",
     type: "JOIN_REQUEST_APPROVED",
+  },
+  {
+    createdAt: minutesAgo(60 * 24 * 4),
+    id: 5,
+    isRead: true,
+    message: "주말 잼 세션에 새 공연이 열렸어요",
+    targetId: 1,
+    targetType: "PERFORMANCE",
+    type: "PERFORMANCE_CREATED",
   },
 ];
 
 export const BOOKMARKS: Bookmark[] = [
-  { id: 1, targetId: 2, targetType: "USER" },
-  { id: 2, targetId: 3, targetType: "USER" },
-  { id: 3, targetId: 7, targetType: "USER" },
-  { id: 4, targetId: 2, targetType: "TEAM" },
-  { id: 5, targetId: 3, targetType: "TEAM" },
-  { id: 6, targetId: 103, targetType: "SONG" },
+  { id: 1, targetId: 4, targetType: "USER" },
+  { id: 2, targetId: 5, targetType: "USER" },
+  { id: 3, targetId: 6, targetType: "USER" },
+  { id: 4, targetId: 10, targetType: "USER" },
+  { id: 5, targetId: 1, targetType: "TEAM" },
+  { id: 6, targetId: 104, targetType: "SONG" },
+  { id: 7, targetId: 101, targetType: "SONG" },
+  { id: 8, targetId: 108, targetType: "SONG" },
+];
+
+function songSummary(id: number) {
+  const s = SONGS.find((item) => item.id === id) as Song;
+  return { artist: s.artist, id: s.id, title: s.title };
+}
+
+/**
+ * 내 연습 녹음(서버 §13). 녹음은 3~60초·1.95MB 이하만 올릴 수 있어서 길이도 그 안이다.
+ * 한 사람당 진행 중(SUBMITTED·ANALYZING) 분석은 하나뿐이다.
+ */
+export const PRACTICE_RECORDINGS: PracticeRecording[] = [
+  {
+    analyzedAt: "2026-11-12T20:13:00",
+    createdAt: "2026-11-12T20:10:00",
+    durationSec: 58,
+    failureReason: null,
+    feedbacks: [
+      {
+        content: "원곡보다 반 박 빨리 들어왔어요.",
+        endSec: 11,
+        part: "VOCAL",
+        startSec: 11,
+      },
+      {
+        content: "후렴 첫 음이 원곡보다 낮아요.",
+        endSec: 29,
+        part: "VOCAL",
+        startSec: 29,
+      },
+      {
+        content: "브릿지에서 박자가 조금 밀렸어요.",
+        endSec: 47,
+        part: "VOCAL",
+        startSec: 47,
+      },
+    ],
+    id: 1,
+    part: "VOCAL",
+    song: songSummary(104),
+    status: "DONE",
+    title: "Basket Case 보컬 연습",
+  },
+  {
+    analyzedAt: null,
+    createdAt: "2026-11-10T22:40:00",
+    durationSec: 44,
+    failureReason: null,
+    feedbacks: [],
+    id: 2,
+    part: "EL_GT",
+    song: songSummary(103),
+    status: "ANALYZING",
+    title: "Antifreeze 일렉 기타 연습",
+  },
+  {
+    analyzedAt: "2026-11-08T21:05:00",
+    createdAt: "2026-11-08T21:02:00",
+    durationSec: 52,
+    failureReason: null,
+    feedbacks: [
+      {
+        content: "인트로 코드 전환이 원곡보다 늦어요.",
+        endSec: 8,
+        part: "KEY",
+        startSec: 6,
+      },
+    ],
+    id: 3,
+    part: "KEY",
+    song: songSummary(101),
+    status: "DONE",
+    title: "Plastic Love 키보드 연습",
+  },
+  {
+    analyzedAt: null,
+    createdAt: "2026-11-03T19:30:00",
+    durationSec: 37,
+    failureReason: "원곡과 맞추지 못했어요. 같은 곡을 다시 녹음해 주세요.",
+    feedbacks: [],
+    id: 4,
+    part: "VOCAL",
+    song: songSummary(102),
+    status: "FAILED",
+    title: "Hype Boy 보컬 연습",
+  },
+  {
+    analyzedAt: "2026-10-28T23:01:00",
+    createdAt: "2026-10-28T22:58:00",
+    durationSec: 60,
+    failureReason: null,
+    feedbacks: [
+      {
+        content: "고음 구간에서 박자가 조금 늦어요.",
+        endSec: 41,
+        part: "VOCAL",
+        startSec: 39,
+      },
+    ],
+    id: 5,
+    part: "VOCAL",
+    song: songSummary(108),
+    status: "DONE",
+    title: "사건의 지평선 보컬 연습",
+  },
 ];

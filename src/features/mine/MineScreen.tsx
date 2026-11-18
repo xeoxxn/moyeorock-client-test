@@ -1,314 +1,159 @@
-import {
-  Button,
-  List,
-  ListCell,
-  ListCellContent,
-  Switch,
-  TextButton,
-  TopNavigationButton,
-} from "@wanteddev/wds";
-import {
-  IconBell,
-  IconChevronRightTightSmall,
-  IconMusicMicrophone,
-} from "@wanteddev/wds-icon";
-import { useState } from "react";
+import { Button, ListCell, ListCellContent } from "@wanteddev/wds";
+import { IconSetting } from "@wanteddev/wds-icon";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+
+import CoverRow from "@/components/list/CoverRow";
+import { coverToneOf } from "@/components/music/Cover";
+import EmptyState from "@/components/ui/EmptyState";
+import HeaderIconButton from "@/components/ui/HeaderIconButton";
 import { rowClick } from "@/components/ui/listCellEvents";
+import ScreenBody from "@/components/ui/ScreenBody";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import SectionHeader from "@/components/ui/SectionHeader";
-import { useAppAlert } from "@/components/ui/useAppAlert";
-import { useScreenHeader } from "@/components/ui/useScreenHeader";
-import ActivitySection from "@/features/mine/components/ActivitySection";
+import Stat from "@/components/ui/Stat";
 import {
-  ProfileHeader,
-  ProfileInfoCard,
-} from "@/features/mine/components/ProfileSummary";
-import { formatDate } from "@/lib/domain/format";
+  useScreenBackdrop,
+  useScreenHeader,
+} from "@/components/ui/useScreenHeader";
+import ProfileSummary from "@/features/mine/components/ProfileSummary";
+import { daysUntil } from "@/lib/domain/format";
+import { INSTRUMENT_LABEL } from "@/lib/domain/labels";
+import type { Team } from "@/lib/domain/types";
 import {
-  GROUP_ROLE_LABEL,
-  TEAM_KIND_LABEL,
-  TEAM_ROLE_LABEL,
-} from "@/lib/domain/labels";
-import type { Song, User } from "@/lib/domain/types";
-import {
-  getAllSongs,
-  getBookmarks,
+  getBookmarkedIds,
   getMe,
-  getMyGroups,
+  getMyInstrumentInTeam,
   getMyTeams,
-  getMyUpcomingPerformances,
+  getNextTeamRehearsal,
+  getPracticeRecordings,
 } from "@/mocks/selectors";
 
-// Figma: 마이/01 마이(Bottom Nav "마이" 탭 루트). "마이/07 회원 탈퇴 확인"은 화면이 아니라 이 화면
-// 위에 뜨는 확인창이라 WDS 확인창(useAppAlert)으로 띄운다.
+// Figma 07 마이(419:13011) — Bottom Nav "마이" 탭 루트. 프로필 + 통계(연습 분석 · 팔로잉 · 저장한 곡)
+// + 내 팀 + 메뉴(받은 신청·초대 · 알림 설정 · 계정). 로그아웃·탈퇴와 공개 설정은 /mine/account로 옮겼다.
 
-/**
- * 서버 대시보드의 recommendedSongs는 아직 null이다 — 내 음악 취향이나 내 세션으로 칠 수 있는 곡을
- * 목업에서 골라 둔다.
- */
-function getRecommendedSongs(user: User): Song[] {
-  const myInstruments = new Set(
-    user.instruments.map((item) => item.instrument),
-  );
-  return getAllSongs()
-    .filter(
-      (song) =>
-        user.genres.includes(song.genre) ||
-        song.difficulty.some((item) => myInstruments.has(item.part)),
-    )
-    .slice(0, 3);
+/** "보컬 · 멤버 4명 · 다음 합주 오늘" — 오늘 합주가 없으면 선택곡 수 */
+function getTeamMeta(team: Team): string {
+  const instrument = getMyInstrumentInTeam(team);
+  const nextRehearsal = getNextTeamRehearsal(team.id);
+  return [
+    instrument ? INSTRUMENT_LABEL[instrument] : undefined,
+    `멤버 ${team.members.length}명`,
+    nextRehearsal && daysUntil(nextRehearsal.startsAt) === 0
+      ? "다음 합주 오늘"
+      : `선택곡 ${team.songIds.length}곡`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
-/**
- * 서버는 팀장·모임장이면 탈퇴를 409 WITHDRAW_BLOCKED_BY_ROLE로 막고 어느 팀·모임인지 message에 담는다
- * (UserWithdrawService.blockedMessage와 같은 문장). 직책이 없으면 null.
- */
-function getWithdrawBlockedMessage(): string | null {
-  const quoted = (names: string[]) =>
-    names.map((name) => `'${name}'`).join(", ");
-  const ledTeams = getMyTeams()
-    .filter((team) => team.myRole === "LEADER")
-    .map((team) => team.name);
-  const ownedGroups = getMyGroups()
-    .filter((group) => group.myRole === "OWNER")
-    .map((group) => group.name);
-
-  const parts: string[] = [];
-  if (ledTeams.length > 0) parts.push(`팀 ${quoted(ledTeams)}의 팀장을 위임`);
-  if (ownedGroups.length > 0) {
-    parts.push(`모임 ${quoted(ownedGroups)}의 모임장을 위임하거나 모임을 해체`);
-  }
-  return parts.length > 0
-    ? `${parts.join("하고, ")}한 뒤 탈퇴할 수 있어요.`
-    : null;
-}
+const MENU = [
+  { label: "받은 신청·초대", path: "/mine/invitations" },
+  { label: "알림 설정", path: "/mine/notifications" },
+  { label: "계정", path: "/mine/account" },
+];
 
 function MineScreen() {
   const navigate = useNavigate();
-  const alert = useAppAlert();
   const me = getMe();
-  // PUT /users/me의 isActivityPublic·isRecommendable. 목업 User에는 isRecommendable이 없어 켜 둔 채로 시작한다.
-  const [activityPublic, setActivityPublic] = useState(me.isActivityPublic);
-  const [recommendable, setRecommendable] = useState(true);
+  const teams = getMyTeams();
 
   useScreenHeader(
-    <ScreenHeader
-      title="마이"
-      trailing={
-        <TopNavigationButton
-          aria-label="알림"
-          onClick={() => navigate("/notifications")}
-        >
-          <IconBell />
-        </TopNavigationButton>
-      }
-      variant="title"
-    />,
+    useMemo(
+      () => (
+        <ScreenHeader
+          title="마이"
+          trailing={
+            <HeaderIconButton
+              icon={<IconSetting />}
+              label="계정 설정"
+              onClick={() => navigate("/mine/account")}
+            />
+          }
+          variant="title"
+        />
+      ),
+      [navigate],
+    ),
   );
-
-  const groups = getMyGroups();
-  const teams = getMyTeams();
-  const performances = getMyUpcomingPerformances();
-  const recommendedSongs = getRecommendedSongs(me);
-  const bookmarks = getBookmarks();
-  const bookmarkCount = (type: "USER" | "TEAM" | "SONG") =>
-    bookmarks.filter((bookmark) => bookmark.targetType === type).length;
-
-  // 서버에 로그아웃 API가 없다 — 앱이 들고 있는 토큰만 지우고 로그인 화면으로 보낸다.
-  const logout = async () => {
-    const result = await alert({
-      cancel: "취소",
-      confirm: "로그아웃",
-      content: "다시 로그인하면 이어서 쓸 수 있어요.",
-      title: "로그아웃할까요?",
-    });
-    if (result === "confirm") navigate("/login", { replace: true });
-  };
-
-  const withdraw = async () => {
-    const blockedMessage = getWithdrawBlockedMessage();
-    if (blockedMessage) {
-      await alert({
-        confirm: "확인",
-        content: blockedMessage,
-        title: "아직 탈퇴할 수 없어요",
-      });
-      return;
-    }
-    const result = await alert({
-      cancel: "취소",
-      confirm: "탈퇴하기",
-      content: "소속 모임·팀과 활동 기록이 모두 삭제되고 되돌릴 수 없어요.",
-      title: "정말 탈퇴할까요?",
-    });
-    if (result === "confirm") navigate("/login", { replace: true });
-  };
+  useScreenBackdrop("stage");
 
   return (
-    <div className="scrollbar-hidden flex-1 overflow-y-auto">
-      <section className="flex flex-col gap-4 px-5 pt-2 pb-6">
-        <ProfileHeader user={me} />
-        <Button
-          color="assistive"
-          fullWidth
-          onClick={() => navigate("/mine/profile")}
-          size="medium"
-          variant="outlined"
-        >
-          프로필 수정
-        </Button>
-        <ProfileInfoCard
-          sessionAction={
-            <TextButton
-              color="assistive"
-              onClick={() => navigate("/mine/session")}
-              size="small"
-              trailingContent={<IconChevronRightTightSmall />}
-            >
-              세션 수정
-            </TextButton>
-          }
-          sessionLabel="내 세션"
-          user={me}
-        />
+    <ScreenBody>
+      <section className="flex flex-col items-start gap-4 px-5 pt-4">
+        <ProfileSummary user={me} />
+        {/* Figma엔 "프로필 편집"만 있다. 세션은 서버 API가 따로라(PUT /users/me/instruments) 편집 화면도
+            따로인데 들어갈 곳이 없어 옆에 하나 더 둔다 — 멤버 프로필(23)의 "초대 · 저장" 두 버튼과 같은 줄. */}
+        <div className="flex gap-2">
+          <Button
+            color="assistive"
+            onClick={() => navigate("/mine/profile")}
+            size="small"
+            variant="outlined"
+          >
+            프로필 편집
+          </Button>
+          <Button
+            color="assistive"
+            onClick={() => navigate("/mine/session")}
+            size="small"
+            variant="outlined"
+          >
+            세션 편집
+          </Button>
+        </div>
       </section>
 
-      <div className="h-3 bg-surface" />
-      <ActivitySection
-        emptyText="아직 소속된 모임·팀이 없어요"
-        links={[
-          ...groups.map((group) => ({
-            caption: `모임 · ${group.myRole ? GROUP_ROLE_LABEL[group.myRole] : ""}`,
-            key: `group-${group.id}`,
-            title: group.name,
-            to: `/crew/${group.id}`,
-          })),
-          ...teams.map((team) => ({
-            caption: `${TEAM_KIND_LABEL[team.performanceId !== null ? "performance" : "independent"]} · ${team.myRole ? TEAM_ROLE_LABEL[team.myRole] : ""}`,
-            key: `team-${team.id}`,
-            title: team.name,
-            to: `/team/${team.id}`,
-          })),
-          ...performances.map((performance) => ({
-            caption: `공연 · ${formatDate(performance.performedAt)}`,
-            key: `show-${performance.id}`,
-            title: performance.title,
-            to: `/show/${performance.id}`,
-          })),
-        ]}
-        stats={[
-          { count: groups.length, label: "소속 모임" },
-          { count: teams.length, label: "소속 팀" },
-          { count: performances.length, label: "참여 중인 공연" },
-        ]}
-        title="내 활동"
-      />
+      {/* 팔로잉 = 유저 북마크(서버 북마크 대상은 유저·팀·곡) */}
+      <div className="flex px-5 pt-7">
+        <Stat
+          label="연습 분석"
+          onClick={() => navigate("/practice")}
+          value={getPracticeRecordings().length}
+        />
+        <Stat
+          label="팔로잉"
+          onClick={() => navigate("/mine/interests?tab=user")}
+          value={getBookmarkedIds("USER").length}
+        />
+        <Stat
+          label="저장한 곡"
+          onClick={() => navigate("/mine/interests?tab=song")}
+          value={getBookmarkedIds("SONG").length}
+        />
+      </div>
 
-      {recommendedSongs.length > 0 && (
-        <>
-          <div className="h-3 bg-surface" />
-          <section className="flex flex-col gap-1 px-5 py-6">
-            <SectionHeader title="내 취향 추천곡" />
-            <List>
-              {recommendedSongs.map((song) => (
-                <ListCell
-                  alignItems="center"
-                  disableInteraction
-                  key={song.id}
-                  leadingContent={
-                    <ListCellContent variant="large-icon">
-                      <IconMusicMicrophone />
-                    </ListCellContent>
-                  }
-                  textProps={{ caption: song.artist, weight: "bold" }}
-                >
-                  {song.title}
-                </ListCell>
-              ))}
-            </List>
-          </section>
-        </>
+      <SectionHeader title="내 팀" />
+      {teams.length === 0 ? (
+        <EmptyState
+          description="모집글에 지원하거나 초대를 받으면 여기에 모여요"
+          title="아직 팀이 없어요"
+        />
+      ) : (
+        teams.map((team) => (
+          <CoverRow
+            key={team.id}
+            meta={getTeamMeta(team)}
+            onClick={() => navigate(`/team/${team.id}`)}
+            title={team.name}
+            tone={coverToneOf("team", team.id)}
+          />
+        ))
       )}
 
-      <div className="h-3 bg-surface" />
-      <section className="flex flex-col gap-1 px-5 py-6">
-        <SectionHeader
-          actionLabel="전체보기"
-          onAction={() => navigate("/mine/interests")}
-          title="저장 목록"
-        />
-        <List>
+      <div className="pt-4">
+        {MENU.map((item) => (
           <ListCell
-            onClick={rowClick(() => navigate("/mine/interests"))}
-            textProps={{
-              caption: `유저 ${bookmarkCount("USER")} · 팀 ${bookmarkCount("TEAM")} · 곡 ${bookmarkCount("SONG")}`,
-            }}
+            fillWidth
+            key={item.path}
+            onClick={rowClick(() => navigate(item.path))}
             trailingContent={<ListCellContent variant="chevron" />}
           >
-            저장한 항목
+            {item.label}
           </ListCell>
-        </List>
-      </section>
-
-      <div className="h-3 bg-surface" />
-      <section className="flex flex-col gap-1 px-5 pt-6 pb-8">
-        <SectionHeader title="설정" />
-        <List>
-          {/* 스위치 행은 스위치만 누른다 — WDS ListCell은 role="switch"를 대신 눌러 주지 않는다. */}
-          <ListCell
-            alignItems="center"
-            disableInteraction
-            textProps={{
-              caption: "다른 사용자가 내 모임·팀·공연 기록을 볼 수 있어요",
-            }}
-            trailingContent={
-              <ListCellContent variant="switch">
-                <Switch
-                  aria-label="활동 기록 공개"
-                  checked={activityPublic}
-                  onCheckedChange={setActivityPublic}
-                />
-              </ListCellContent>
-            }
-          >
-            활동 기록 공개
-          </ListCell>
-          <ListCell
-            alignItems="center"
-            disableInteraction
-            textProps={{
-              caption: "팀장이 AI 팀원 추천에서 나를 찾을 수 있어요",
-            }}
-            trailingContent={
-              <ListCellContent variant="switch">
-                <Switch
-                  aria-label="팀원 추천 받기"
-                  checked={recommendable}
-                  onCheckedChange={setRecommendable}
-                />
-              </ListCellContent>
-            }
-          >
-            팀원 추천 받기
-          </ListCell>
-          <ListCell
-            onClick={rowClick(() => navigate("/mine/invitations"))}
-            textProps={{ caption: "받은 초대와 보낸 가입 신청을 확인해요" }}
-            trailingContent={<ListCellContent variant="chevron" />}
-          >
-            초대 · 신청
-          </ListCell>
-          <ListCell onClick={rowClick(logout)}>로그아웃</ListCell>
-          <ListCell
-            onClick={rowClick(withdraw)}
-            textProps={{ caption: "계정과 활동 기록이 모두 삭제돼요" }}
-          >
-            회원 탈퇴
-          </ListCell>
-        </List>
-      </section>
-    </div>
+        ))}
+      </div>
+    </ScreenBody>
   );
 }
 

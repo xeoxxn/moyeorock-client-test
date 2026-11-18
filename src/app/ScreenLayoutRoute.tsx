@@ -2,9 +2,14 @@ import { useMatches } from "react-router-dom";
 
 import ScreenLayout from "@/components/ui/ScreenLayout";
 
-// 화면별 레이아웃 옵션 — router.tsx의 각 라우트에 `handle: { ... } satisfies ScreenRouteHandle`로 지정한다.
+// 화면별 레이아웃 옵션 — 각 라우트에 `handle: { ... } satisfies ScreenRouteHandle`로 지정한다.
 export interface ScreenRouteHandle {
+  /** 하단 탭. 기본 true — 하단 고정 버튼만 있는 폼·온보딩·시트형 화면은 false */
   hasBottomNav?: boolean;
+  /** 하단 탭 위 미니 플레이어(지금 듣는 연습 녹음). 탭 루트와 연습 분석 목록만 true */
+  hasMiniPlayer?: boolean;
+  /** 헤더 없이 화면이 상단 안전영역까지 가득 차는 화면(08 시작 화면의 사진). 안전영역 여백은 화면이 맡는다. */
+  fullBleed?: boolean;
 }
 
 // useMatches()는 handle을 unknown으로 준다. ScreenRouteHandle은 필드가 전부 선택이라 객체면 이 타입으로 본다.
@@ -35,6 +40,10 @@ function ScreenLayoutRoute() {
   return (
     <ScreenLayout
       hasBottomNav={resolveScreenRouteOption(handles, "hasBottomNav") ?? true}
+      fullBleed={resolveScreenRouteOption(handles, "fullBleed") ?? false}
+      hasMiniPlayer={
+        resolveScreenRouteOption(handles, "hasMiniPlayer") ?? false
+      }
     />
   );
 }

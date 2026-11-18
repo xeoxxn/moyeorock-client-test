@@ -1,4 +1,5 @@
 import {
+  Chip,
   DatePicker,
   type DateType,
   FormControl,
@@ -8,26 +9,29 @@ import {
   TimePicker,
   useToast,
 } from "@wanteddev/wds";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import BottomActionArea from "@/components/ui/BottomActionArea";
 import EmptyState from "@/components/ui/EmptyState";
+import FieldLabel, { fieldLabelSx } from "@/components/ui/FieldLabel";
+import ScreenBody from "@/components/ui/ScreenBody";
 import ScreenHeader from "@/components/ui/ScreenHeader";
-import SelectField from "@/components/ui/SelectField";
 import TextInputField from "@/components/ui/TextInputField";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import { startOfDay } from "@/features/schedule/scheduleHelpers";
 import { getMyTeams, toId } from "@/mocks/selectors";
 
-// Figma: 일정/03 일정 추가 (101:12846). "일정/05 날짜 선택"(101:13144)·"일정/06 시간 선택"(101:13396)은
-// 이 폼에서 날짜·시간 칸을 눌렀을 때 펼쳐지는 선택기 상태라 라우트가 아니라 WDS DatePicker·TimePicker의
-// 팝오버로 대신한다.
+// Figma 21 합주 일정 추가(501:20118) — 일정 탭의 + 와 팀 합주 탭에서 들어온다. 합주는 팀 단위라
+// (POST /teams/{teamId}/rehearsals) 맨 위에서 내 팀을 고르고, 팀에서 들어오면 ?teamId=로 미리 골라 둔다.
+// 제목은 고른 팀 이름으로 "{팀} 합주"를 채워 두고, 직접 고치면 그 뒤로는 팀을 바꿔도 두지 않는다.
+// 날짜·시간 칸은 WDS DatePicker·TimePicker 팝오버로 고른다(모바일에서 키패드 대신 바로 열리게 inputMode none).
 //
-// 서버: POST /teams/{teamId}/rehearsals {title(필수, 100자), startsAt, endsAt(> startsAt), place, memo}.
-// 합주는 팀 단위라 팀 일정에서 오면(?teamId=) 팀이 고정이고, 일정 탭에서 오면 내 팀 중 하나를 먼저
-// 고른다(Figma 플로우 S5-B "어느 팀? teamId 선택 필요").
-
+// 서버 검증(RehearsalCreateRequest): 제목 필수 100자 · 종료가 시작보다 늦게 · 24시간 이내 · 장소 100자 ·
+// 메모 20,000자. 한 날짜 안에서 시작·종료 시간을 고르니 24시간은 넘을 수 없다.
 const TITLE_MAX = 100;
+const PLACE_MAX = 100;
+const MEMO_MAX = 20000;
 
 function toDateOrNull(value: DateType): Date | null {
   if (!value) return null;
@@ -35,9 +39,9 @@ function toDateOrNull(value: DateType): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function atTime(hours: number, minutes = 0): Date {
+function atTime(hours: number): Date {
   const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
+  date.setHours(hours, 0, 0, 0);
   return date;
 }
 
@@ -49,49 +53,33 @@ function ScheduleAddScreen() {
   const navigate = useNavigate();
   const toast = useToast();
   const [searchParams] = useSearchParams();
-  const teamIdParam = searchParams.get("teamId");
   const myTeams = getMyTeams();
-  const fixedTeam =
-    teamIdParam !== null
-      ? myTeams.find((team) => team.id === toId(teamIdParam))
-      : undefined;
 
   const [teamId, setTeamId] = useState(() => {
-    if (fixedTeam) return String(fixedTeam.id);
-    // 팀이 하나뿐이면 고를 게 없으니 미리 채운다.
-    return myTeams.length === 1 ? String(myTeams[0].id) : "";
+    const fromParam = myTeams.find(
+      (team) => team.id === toId(searchParams.get("teamId") ?? undefined),
+    );
+    return (fromParam ?? myTeams[0])?.id;
   });
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState<Date | null>(null);
+  // null이면 고른 팀 이름으로 채운 제목을 쓴다.
+  const [customTitle, setCustomTitle] = useState<string | null>(null);
+  const [date, setDate] = useState<Date | null>(() => startOfDay(new Date()));
   const [startTime, setStartTime] = useState<Date | null>(() => atTime(19));
   const [endTime, setEndTime] = useState<Date | null>(() => atTime(21));
   const [place, setPlace] = useState("");
   const [memo, setMemo] = useState("");
-  // 모바일에서 칸을 누르면 숫자 키패드 대신 바로 캘린더·시간 목록이 열리게 한다(Figma 05·06처럼).
   const [dateOpen, setDateOpen] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
 
-  useScreenHeader(<ScreenHeader title="합주 일정 추가" variant="normal" />);
-
-  // 팀 일정에서 넘어온 teamId가 내 팀이 아니면(주소를 직접 고친 경우 등) 폼을 열지 않는다.
-  if (teamIdParam !== null && !fixedTeam) {
-    return (
-      <div className="flex flex-1 flex-col justify-center">
-        <EmptyState
-          description="내가 속한 팀에서만 합주 일정을 추가할 수 있어요"
-          title="팀을 찾을 수 없어요"
-        />
-      </div>
-    );
-  }
+  useScreenHeader(useMemo(() => <ScreenHeader title="합주 일정 추가" />, []));
 
   if (myTeams.length === 0) {
     return (
-      <div className="flex flex-1 flex-col justify-center">
+      <div className="flex flex-1 flex-col justify-center pb-16">
         <EmptyState
           action={{
-            label: "팀 모집 공고 보기",
+            label: "팀 찾아보기",
             onClick: () => navigate("/board?type=team"),
           }}
           description="합주 일정은 팀 단위로 만들어요. 먼저 팀에 들어가 보세요"
@@ -101,12 +89,14 @@ function ScheduleAddScreen() {
     );
   }
 
+  const team = myTeams.find((item) => item.id === teamId);
+  const title = customTitle ?? (team ? `${team.name} 합주` : "");
   const rangeError =
     startTime && endTime && minutesOfDay(endTime) <= minutesOfDay(startTime)
       ? "종료 시간은 시작 시간보다 늦어야 해요"
       : undefined;
   const canSave =
-    teamId !== "" &&
+    team !== undefined &&
     title.trim() !== "" &&
     date !== null &&
     startTime !== null &&
@@ -114,45 +104,46 @@ function ScheduleAddScreen() {
     rangeError === undefined;
 
   const save = () => {
-    // 목업이라 실제로 저장하지는 않는다. 서버에 붙일 때 startsAt·endsAt = date + 각 시간으로 보낸다.
+    // 목업이라 저장하지 않는다. 서버에 붙일 때 startsAt·endsAt = 날짜 + 각 시간(오프셋 없는 로컬 ISO).
     toast({ content: "합주 일정을 추가했어요", variant: "positive" });
-    navigate(fixedTeam ? `/team/${fixedTeam.id}/schedule` : "/schedule", {
-      replace: true,
-    });
+    navigate(-1);
   };
-
-  const startOfToday = atTime(0);
 
   return (
     <>
-      <div className="scrollbar-hidden flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-2 pb-8">
-        <SelectField
-          disabled={fixedTeam !== undefined}
-          label="팀"
-          message={fixedTeam ? undefined : "합주 일정은 팀 단위로 추가돼요"}
-          onChange={setTeamId}
-          options={myTeams.map((team) => ({
-            label: team.name,
-            value: String(team.id),
-          }))}
-          placeholder="팀을 골라 주세요"
-          value={teamId}
-        />
+      <ScreenBody className="flex flex-col gap-6 px-5 pt-2">
+        <div className="flex flex-col gap-2">
+          <FieldLabel>팀</FieldLabel>
+          <div className="flex flex-wrap gap-2">
+            {myTeams.map((item) => (
+              <Chip
+                active={item.id === teamId}
+                key={item.id}
+                onClick={() => setTeamId(item.id)}
+                size="medium"
+                variant="solid"
+              >
+                {item.name}
+              </Chip>
+            ))}
+          </div>
+        </div>
 
         <TextInputField
           label="제목"
           maxLength={TITLE_MAX}
-          onChange={setTitle}
-          placeholder="밴드 합주"
+          onChange={setCustomTitle}
+          placeholder="팀 합주"
           value={title}
         />
 
         <FormField>
-          <FormLabel>날짜</FormLabel>
+          <FormLabel sx={fieldLabelSx}>날짜</FormLabel>
           <FormControl>
             <DatePicker
+              format="M월 D일"
               inputMode="none"
-              min={startOfToday}
+              min={startOfDay(new Date())}
               onChange={(value) => setDate(toDateOrNull(value))}
               onClick={() => setDateOpen(true)}
               onOpenChange={setDateOpen}
@@ -167,9 +158,10 @@ function ScheduleAddScreen() {
         <div className="flex gap-3">
           <div className="min-w-0 flex-1">
             <FormField>
-              <FormLabel>시작 시간</FormLabel>
+              <FormLabel sx={fieldLabelSx}>시작 시간</FormLabel>
               <FormControl>
                 <TimePicker
+                  format="HH:mm"
                   inputMode="none"
                   onChange={(value) => setStartTime(toDateOrNull(value))}
                   onClick={() => setStartOpen(true)}
@@ -183,9 +175,10 @@ function ScheduleAddScreen() {
           </div>
           <div className="min-w-0 flex-1">
             <FormField>
-              <FormLabel>종료 시간</FormLabel>
+              <FormLabel sx={fieldLabelSx}>종료 시간</FormLabel>
               <FormControl>
                 <TimePicker
+                  format="HH:mm"
                   inputMode="none"
                   invalid={rangeError !== undefined}
                   onChange={(value) => setEndTime(toDateOrNull(value))}
@@ -203,7 +196,7 @@ function ScheduleAddScreen() {
 
         <TextInputField
           label="장소"
-          message="선택 사항이에요"
+          maxLength={PLACE_MAX}
           onChange={setPlace}
           placeholder="합주실 A"
           value={place}
@@ -211,13 +204,13 @@ function ScheduleAddScreen() {
 
         <TextInputField
           label="메모"
-          message="선택 사항이에요"
+          maxLength={MEMO_MAX}
           multiline
           onChange={setMemo}
           placeholder="준비물이나 연습할 곡을 적어 두세요"
           value={memo}
         />
-      </div>
+      </ScreenBody>
 
       <BottomActionArea disabled={!canSave} label="저장" onClick={save} />
     </>

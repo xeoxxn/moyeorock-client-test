@@ -1,211 +1,202 @@
 import {
-  Divider,
+  ActionArea,
+  ActionAreaButton,
   List,
-  ListCell,
-  ListCellContent,
-  TextButton,
   Typography,
   useToast,
 } from "@wanteddev/wds";
-import { useState } from "react";
+import { IconChevronRight } from "@wanteddev/wds-icon";
+import { type ReactNode, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import Badge from "@/components/ui/Badge";
-import BottomActionArea from "@/components/ui/BottomActionArea";
+import MediaRow from "@/components/list/MediaRow";
+import BottomSheet from "@/components/ui/BottomSheet";
+import ConfirmSheet from "@/components/ui/ConfirmSheet";
+import ScreenBody from "@/components/ui/ScreenBody";
+import ScreenHeader from "@/components/ui/ScreenHeader";
 import SectionHeader from "@/components/ui/SectionHeader";
-import SelectField from "@/components/ui/SelectField";
-import TextInputField from "@/components/ui/TextInputField";
-import { useAppAlert } from "@/components/ui/useAppAlert";
-import CoverImageField from "@/features/crew/components/CoverImageField";
-import {
+import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import CrewFallback, {
   CrewNotFound,
-  CrewOwnerOnly,
 } from "@/features/crew/components/CrewFallback";
-import CrewHeroTabs from "@/features/crew/components/CrewHeroTabs";
-import {
-  GROUP_TYPE_LABEL,
-  GROUP_TYPE_OPTIONS,
-  REGION_LABEL,
-  REGION_OPTIONS,
-} from "@/lib/domain/labels";
-import type { Group, GroupType, Region } from "@/lib/domain/types";
+import CrewInfoFields, {
+  type CrewInfo,
+  isCrewInfoValid,
+} from "@/features/crew/components/CrewInfoFields";
+import type { Group } from "@/lib/domain/types";
 import { getGroup, getReceivedJoinRequests, toId } from "@/mocks/selectors";
 
-// Figma: 모임/06 모임 관리 (nodeId 101:20366) — 모임장 전용. 서버 PUT /groups/{id}가 받는 정보(이름 ·
-// 소개 · 유형 · 활동 지역 · 대표 이미지)를 고치고, 가입 신청 관리(모임/13)·공지 쓰기(모임/11)로 간다.
-// Figma에는 유형·지역 칸이 없었지만 서버가 수정할 수 있는 값이라 넣었다. 모임 해체(PATCH status,
-// 서버 soft delete)는 되돌릴 수 없어서 맨 아래에 따로 두고 확인을 받는다.
-interface GroupForm {
-  name: string;
-  description: string;
-  type: GroupType;
-  region: Region;
-}
+// 모임 설정(/crew/:id/manage) — 모임 홈 헤더의 ⋮ 에서 들어온다(Figma에는 없는 화면). 서버 권한대로
+// 모임장은 받은 신청 · 공지 쓰기 · 모임 정보 수정(PUT /groups/{id}) · 해체(PATCH status, soft delete)를,
+// 그 밖의 모임원은 나가기(PATCH members/{me}/status)만 한다. 모임장은 나갈 수 없다(OWNER_CANNOT_LEAVE).
+// 되돌리기 어려운 해체·나가기는 Figma 17 확정 시트(ConfirmSheet)로 한 번 더 묻는다.
+const chevron = (
+  <IconChevronRight className="size-5 shrink-0 text-label-assistive" />
+);
 
-const TYPE_OPTIONS = GROUP_TYPE_OPTIONS.map((value) => ({
-  label: GROUP_TYPE_LABEL[value],
-  value,
-}));
-
-const REGION_SELECT_OPTIONS = REGION_OPTIONS.map((value) => ({
-  label: REGION_LABEL[value],
-  value,
-}));
-
-function isSameForm(a: GroupForm, b: GroupForm) {
+function MenuRow({
+  danger = false,
+  meta,
+  onClick,
+  title,
+  trailing = chevron,
+}: {
+  title: string;
+  meta?: string;
+  onClick: () => void;
+  trailing?: ReactNode;
+  danger?: boolean;
+}) {
   return (
-    a.name === b.name &&
-    a.description === b.description &&
-    a.type === b.type &&
-    a.region === b.region
+    <MediaRow
+      meta={meta}
+      onClick={onClick}
+      title={danger ? <span className="text-accent-text">{title}</span> : title}
+      trailing={trailing}
+    />
   );
 }
 
 function CrewManage({ group }: { group: Group }) {
   const navigate = useNavigate();
-  const alert = useAppAlert();
   const toast = useToast();
-  const [saved, setSaved] = useState<GroupForm>({
+  const isOwner = group.myRole === "OWNER";
+  const pendingCount = isOwner
+    ? getReceivedJoinRequests("GROUP", group.id).length
+    : 0;
+
+  const [info, setInfo] = useState<CrewInfo>(() => ({
     description: group.description,
     name: group.name,
     region: group.region,
     type: group.type,
-  });
-  const [form, setForm] = useState<GroupForm>(saved);
-  const pendingCount = getReceivedJoinRequests("GROUP", group.id).length;
+  }));
+  const [editOpen, setEditOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const canSave = !isSameForm(form, saved) && form.name.trim() !== "";
+  const title = isOwner ? "모임 관리" : "모임 설정";
+  useScreenHeader(useMemo(() => <ScreenHeader title={title} />, [title]));
 
-  const update = <K extends keyof GroupForm>(key: K, value: GroupForm[K]) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
-
-  const save = () => {
-    const next = { ...form, name: form.name.trim() };
-    setForm(next);
-    setSaved(next);
+  const saveInfo = () => {
+    setEditOpen(false);
     toast({ content: "모임 정보를 저장했어요", variant: "positive" });
   };
 
-  const disband = async () => {
-    const result = await alert({
-      cancel: "취소",
-      confirm: "해체",
-      content:
-        "해체하면 모든 멤버가 모임에서 빠지고, 공지와 공연 기록을 더 볼 수 없어요. 되돌릴 수 없어요.",
-      title: "모임을 해체할까요?",
+  const finish = () => {
+    toast({
+      content: isOwner ? "모임을 해체했어요" : `${group.name}에서 나왔어요`,
     });
-    if (result !== "confirm") return;
-    toast({ content: "모임을 해체했어요" });
     navigate("/crew", { replace: true });
   };
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="scrollbar-hidden flex-1 overflow-y-auto">
-        <CrewHeroTabs active="manage" group={group} />
+    <>
+      <ScreenBody>
+        {isOwner && (
+          <>
+            <SectionHeader flush title="운영" />
+            <List>
+              <MenuRow
+                meta="가입 신청을 승인하거나 거절해요"
+                onClick={() => navigate(`/crew/${group.id}/applications`)}
+                title="받은 신청"
+                trailing={
+                  <span className="flex shrink-0 items-center gap-1">
+                    {pendingCount > 0 && (
+                      <span className="text-accent-text">
+                        <Typography as="span" variant="label1" weight="medium">
+                          {pendingCount}명
+                        </Typography>
+                      </span>
+                    )}
+                    {chevron}
+                  </span>
+                }
+              />
+              <MenuRow
+                meta="모임원 모두에게 알림이 가요"
+                onClick={() => navigate(`/crew/${group.id}/notice/new`)}
+                title="공지 쓰기"
+              />
+              <MenuRow
+                meta="이름 · 유형 · 지역 · 소개"
+                onClick={() => setEditOpen(true)}
+                title="모임 정보 수정"
+              />
+            </List>
+          </>
+        )}
 
-        <section className="flex flex-col gap-1 px-5 pt-6">
-          <SectionHeader title="운영" />
-          <List>
-            <ListCell
-              trailingContent={
-                // 셀 어디를 눌러도 WDS ListCell이 이 chevron을 대신 눌러 준다(셀에도 달면 두 번 불린다).
-                <ListCellContent
-                  aria-label="가입 신청 관리로 이동"
-                  onClick={() => navigate(`/crew/${group.id}/applications`)}
-                  variant="chevron"
-                >
-                  {pendingCount > 0 && <Badge glow>대기 {pendingCount}</Badge>}
-                </ListCellContent>
-              }
+        <SectionHeader flush={!isOwner} title={group.name} />
+        <List>
+          <MenuRow
+            danger
+            meta={
+              isOwner
+                ? "모든 멤버가 빠지고 되돌릴 수 없어요"
+                : "나가면 이 모임의 공지와 공연을 볼 수 없어요"
+            }
+            onClick={() => setConfirmOpen(true)}
+            title={isOwner ? "모임 해체" : "모임 나가기"}
+            trailing={null}
+          />
+        </List>
+      </ScreenBody>
+
+      <BottomSheet
+        footer={
+          <ActionArea variant="strong">
+            <ActionAreaButton
+              disabled={!isCrewInfoValid(info)}
+              onClick={saveInfo}
             >
-              가입 신청 관리
-            </ListCell>
-            <ListCell
-              trailingContent={
-                <ListCellContent
-                  aria-label="공지 쓰기로 이동"
-                  onClick={() => navigate(`/crew/${group.id}/notice/new`)}
-                  variant="chevron"
-                />
-              }
-            >
-              공지 쓰기
-            </ListCell>
-          </List>
-        </section>
+              저장
+            </ActionAreaButton>
+          </ActionArea>
+        }
+        onOpenChange={setEditOpen}
+        open={editOpen}
+        title="모임 정보 수정"
+      >
+        <div className="flex flex-col gap-6 pb-2">
+          <CrewInfoFields onChange={setInfo} value={info} />
+        </div>
+      </BottomSheet>
 
-        <section className="flex flex-col gap-5 px-5 pt-6 pb-8">
-          <SectionHeader title="모임 정보" />
-          <TextInputField
-            label="모임 이름"
-            maxLength={30}
-            onChange={(value) => update("name", value)}
-            placeholder="모임 이름을 입력해 주세요"
-            value={form.name}
-          />
-          <TextInputField
-            label="소개"
-            multiline
-            onChange={(value) => update("description", value)}
-            placeholder="어떤 음악을 함께하는 모임인지 알려 주세요"
-            value={form.description}
-          />
-          <SelectField
-            label="모임 유형"
-            onChange={(value) => update("type", value)}
-            options={TYPE_OPTIONS}
-            value={form.type}
-          />
-          <SelectField
-            label="활동 지역"
-            onChange={(value) => update("region", value)}
-            options={REGION_SELECT_OPTIONS}
-            value={form.region}
-          />
-          <CoverImageField />
-        </section>
-
-        <Divider
-          color="semantic.background.normal.normal"
-          thickness="0.75rem"
-        />
-
-        <section className="flex flex-col items-start gap-1 px-5 pt-6 pb-8">
-          <Typography
-            color="semantic.label.strong"
-            variant="headline2"
-            weight="bold"
-          >
-            모임 해체
-          </Typography>
-          <Typography
-            color="semantic.label.alternative"
-            variant="label2"
-            weight="regular"
-          >
-            해체한 모임은 되돌릴 수 없어요.
-          </Typography>
-          <TextButton color="primary" onClick={disband} size="small">
-            모임 해체하기
-          </TextButton>
-        </section>
-      </div>
-
-      <BottomActionArea
-        disabled={!canSave}
-        label="변경 내용 저장"
-        onClick={save}
+      <ConfirmSheet
+        confirmLabel={isOwner ? "해체" : "나가기"}
+        description={
+          isOwner
+            ? "모든 멤버가 모임에서 빠지고, 모집 중인 공고도 마감돼요.\n해체한 모임은 되돌릴 수 없어요."
+            : "나가면 이 모임의 공지와 공연을 더 볼 수 없어요.\n다시 들어오려면 가입 신청을 해야 해요."
+        }
+        onConfirm={finish}
+        onOpenChange={setConfirmOpen}
+        open={confirmOpen}
+        title={isOwner ? "모임을 해체할까요?" : "모임에서 나갈까요?"}
       />
-    </div>
+    </>
   );
 }
 
 function CrewManageScreen() {
+  const navigate = useNavigate();
   const { crewId } = useParams();
   const group = getGroup(toId(crewId));
   if (!group) return <CrewNotFound />;
-  if (group.myRole !== "OWNER") return <CrewOwnerOnly crewId={group.id} />;
+  // 비회원은 설정할 것이 없다(⋮ 도 모임원에게만 보인다). 주소로 직접 들어온 경우만 막는다.
+  if (group.myRole === null) {
+    return (
+      <CrewFallback
+        action={{
+          label: "모임 홈",
+          onClick: () => navigate(`/crew/${group.id}`, { replace: true }),
+        }}
+        description="가입 신청이 승인되면 모임 설정을 볼 수 있어요"
+        title="모임원만 볼 수 있어요"
+      />
+    );
+  }
   return <CrewManage group={group} />;
 }
 

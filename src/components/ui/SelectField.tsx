@@ -7,6 +7,8 @@ import {
   Select,
 } from "@wanteddev/wds";
 
+import { fieldLabelSx } from "@/components/ui/FieldLabel";
+
 // 라벨 + 단일 선택(지역 · 모임 유형 · 팀 · 공연 …) — WDS `FormField` + `Select`/`Option`.
 // 선택지는 화면 이동이 아니라 그 자리에서 고르는 값이라 라우트를 만들지 않는다.
 export interface SelectOption<T extends string> {
@@ -35,7 +37,7 @@ function SelectField<T extends string>({
 }: SelectFieldProps<T>) {
   return (
     <FormField>
-      <FormLabel>{label}</FormLabel>
+      <FormLabel sx={fieldLabelSx}>{label}</FormLabel>
       <FormControl>
         <Select
           disabled={disabled}

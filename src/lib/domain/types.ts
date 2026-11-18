@@ -58,6 +58,8 @@ export type NotificationType =
   | "PERFORMANCE_CREATED"
   /** 모임 가입 신청 → 모임장. 모임용 전용 타입이 없어 서버가 이걸로 보낸다. */
   | "RECRUIT_POST_APPLIED";
+/** 연습 녹음 분석 상태(서버 §13 practice) — 전송 완료 · 분석 중 · 분석 완료 · 분석 실패 */
+export type PracticeStatus = "SUBMITTED" | "ANALYZING" | "DONE" | "FAILED";
 export type NotificationTargetType =
   | "TEAM"
   | "GROUP"
@@ -210,6 +212,7 @@ export interface Rehearsal {
   startsAt: string;
   endsAt: string;
   place: string;
+  memo: string;
 }
 
 /** JoinRequestResponse — 가입 신청(APPLY) */
@@ -254,4 +257,33 @@ export interface Bookmark {
   id: number;
   targetType: BookmarkTargetType;
   targetId: number;
+}
+
+/** PracticeFeedbackResponse — AI가 찾은 "원곡과 다르게 연주한 구간" 하나. 초 단위. */
+export interface PracticeFeedback {
+  startSec: number;
+  endSec: number;
+  part: Instrument;
+  content: string;
+}
+
+/**
+ * PracticeRecordingDetailResponse(목록 항목 PracticeRecordingSummaryResponse는 이 중 일부).
+ * 녹음은 올린 본인만 본다.
+ *
+ * `song`·`durationSec`은 서버 응답에 아직 없다 — 곡은 분석 요청 때 고른 값(`songId`)을 클라이언트가
+ * 들고 있고, 길이는 재생할 때 <audio>에서 읽는다. 화면이 곡 이름·아티스트를 보여 주려면 서버 응답에
+ * 곡 요약이 필요하다(서버 쪽 요청 사항).
+ */
+export interface PracticeRecording {
+  id: number;
+  title: string;
+  part: Instrument;
+  status: PracticeStatus;
+  failureReason: string | null;
+  createdAt: string;
+  analyzedAt: string | null;
+  feedbacks: PracticeFeedback[];
+  song: SongSummary;
+  durationSec: number;
 }

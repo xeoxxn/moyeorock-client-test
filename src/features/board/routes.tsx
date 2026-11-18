@@ -7,11 +7,16 @@ import BoardWriteScreen from "@/features/board/BoardWriteScreen";
 
 const noBottomNav = { hasBottomNav: false } satisfies ScreenRouteHandle;
 
-// 게시판(Bottom Nav "게시판" 탭) = 모집 공고(recruit-post). 서버 공고 대상은 모임(GROUP)·팀(TEAM)
-// 둘뿐이라 탭도 둘이다(?type=group|team). 공연은 공고 대상이 아니다 — 공연 팀은 공연 정보에서
-// 직접 만든다. 모임·팀에 새로 들어가는 길이 공고와 초대뿐이라, "모임 찾기"·"팀 찾기"는 여기로 온다.
+// 게시판(Bottom Nav "게시판" 탭, Figma 06) = 모집 공고(recruit-post). 서버 공고 대상은 모임·팀 둘뿐이라
+// 글자 탭도 "모임 | 팀"이다(?type=group|team). 공연 팀은 공고를 올릴 수 없다(서버 409).
+// 모집글 상세(Figma 13) → 지원하기 시트, 모집글 쓰기(Figma 24). 서버 RecruitPost에는 일정·장르·
+// 조회수가 없어 그런 정보는 본문에 쓴다.
 export const boardRoutes: RouteObject[] = [
-  { element: <BoardScreen />, path: "/board" },
+  {
+    element: <BoardScreen />,
+    handle: { hasMiniPlayer: true } satisfies ScreenRouteHandle,
+    path: "/board",
+  },
   { element: <BoardWriteScreen />, handle: noBottomNav, path: "/board/write" },
   {
     element: <BoardPostDetailScreen />,

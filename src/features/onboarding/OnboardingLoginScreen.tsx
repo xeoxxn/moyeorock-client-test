@@ -1,19 +1,36 @@
-import { ActionArea, ActionAreaButton, Typography } from "@wanteddev/wds";
+import { Button, TextButton, Typography, useToast } from "@wanteddev/wds";
 import { IconLogoKakao } from "@wanteddev/wds-icon";
 import { useNavigate } from "react-router-dom";
 
-import neonGlow from "@/assets/decorative/neon-glow-hero.svg";
-import mascotFlag from "@/assets/mascot/flag.png";
-import mascotFriendly from "@/assets/mascot/friendly.png";
+import rehearsalRoomPhoto from "@/assets/photo/rehearsal-room.jpg";
+import { BrandLogoStacked } from "@/components/music/Brand";
 import { getMe } from "@/mocks/selectors";
 
-// Figma: 온보딩/01 로그인 (nodeId 101:11297). "01-1 로그인 (버튼 눌림)"은 별도 화면이 아니라 버튼의
-// 눌림 상태라 라우트를 따로 두지 않는다. "Status Bar"(9:41)는 목업 장식이라 구현하지 않는다.
-//
-// 하단 버튼 셋(카카오 · 이메일 가입 · 이메일 로그인)은 WDS ActionArea `strong`의 main · alternative ·
-// sub 구성과 그대로 맞아서 BottomActionArea(버튼 둘까지) 대신 ActionArea를 직접 쓴다.
+// Figma 08 온보딩·로그인(421:13581). 헤더 없이 합주실 사진을 화면 가득 깔고 스크림(onboarding-scrim)으로
+// 어둡게 덮은 뒤, 세로 로고 + 두 줄 소개 + 아래 버튼(카카오 · 이메일 로그인 · 회원가입 링크)을 얹는다.
+// 상태 표시줄(9:41)은 실기기 장식이라 구현하지 않는다.
+
+const kakaoButtonSx = {
+  backgroundColor: "var(--color-kakao)",
+  color: "var(--color-kakao-label)",
+};
+
+// 사진 위 반투명 흰 버튼(흰색 14% + 배경 흐림)
+const glassButtonSx = {
+  backdropFilter: "blur(1.25rem)",
+  backgroundColor:
+    "color-mix(in srgb, var(--color-static-white) 14%, transparent)",
+  color: "var(--color-static-white)",
+};
+
+const linkSx = { color: "var(--color-static-white)" };
+const dimLinkSx = {
+  color: "color-mix(in srgb, var(--color-static-white) 75%, transparent)",
+};
+
 function OnboardingLoginScreen() {
   const navigate = useNavigate();
+  const toast = useToast();
 
   // 서버: POST /v1/auth/kakao → 신규(isNewUser)면 signupToken·kakaoNickname을 받아 약관 동의로,
   // 기존 회원이면 onboardingCompleted에 따라 홈/온보딩으로 간다. 목업은 신규 회원 흐름을 보여 주려고
@@ -23,93 +40,69 @@ function OnboardingLoginScreen() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col bg-background">
-      <div className="scrollbar-hidden flex flex-1 flex-col overflow-y-auto px-6">
-        {/* justify-center 대신 m-auto — 낮은 화면에서 내용이 넘쳐도 위쪽이 잘리지 않고 스크롤된다. */}
-        <div className="m-auto flex w-full flex-col items-center gap-5 py-6">
-          <div className="flex items-center gap-1.5">
-            <img alt="" className="size-7.5" src={mascotFlag} />
-            <Typography
-              as="p"
-              className="text-glow-sm"
-              color="semantic.label.strong"
-              variant="headline1"
-              weight="bold"
-            >
-              모여락
-            </Typography>
-          </div>
-          <div className="relative w-1/2 max-w-56">
-            <img
-              alt=""
-              className="pointer-events-none absolute inset-0 size-full scale-150"
-              src={neonGlow}
-            />
-            <img
-              alt="모여락 마스코트"
-              className="relative aspect-square w-full object-contain drop-shadow-neon-lg"
-              src={mascotFriendly}
-            />
-          </div>
-          <div className="flex flex-col items-center text-center">
-            <Typography
-              as="p"
-              color="semantic.label.strong"
-              variant="title3"
-              weight="bold"
-            >
-              함께 연주할 사람,
-            </Typography>
-            <Typography
-              as="p"
-              className="text-glow"
-              color="semantic.primary.normal"
-              variant="title3"
-              weight="bold"
-            >
-              모여락에서 찾아요
-            </Typography>
-          </div>
-          <Typography
-            as="p"
-            className="text-center"
-            color="semantic.label.alternative"
-            variant="body2"
-            weight="regular"
-          >
-            합주 일정부터 공연 준비까지
-            <br />
-            밴드 활동을 한 곳에서 관리하세요
-          </Typography>
-        </div>
+    <div className="relative flex h-full flex-col overflow-hidden">
+      <img
+        alt=""
+        className="absolute inset-0 size-full object-cover"
+        src={rehearsalRoomPhoto}
+      />
+      <div aria-hidden className="onboarding-scrim absolute inset-0" />
+
+      <div className="relative flex min-h-0 flex-1 flex-col items-center px-5">
+        {/* 로고는 화면 위에서 4분의 1쯤 — 스크림이 가장 밝은 자리 바로 위에 온다. */}
+        <div className="shrink basis-1/4" />
+        <BrandLogoStacked className="w-55" />
+        <Typography
+          as="p"
+          className="mt-9 whitespace-pre-line text-center"
+          color="semantic.static.white"
+          variant="body1"
+          weight="bold"
+        >
+          {"함께 모여 무대까지,\n밴드 활동을 하나의 흐름으로 이어요"}
+        </Typography>
       </div>
-      <div className="shrink-0 pb-safe-bottom">
-        <ActionArea background variant="strong">
-          <ActionAreaButton
-            leadingContent={<IconLogoKakao />}
-            onClick={startWithKakao}
-            sx={{
-              backgroundColor: "var(--color-kakao)",
-              color: "var(--color-kakao-label)",
-            }}
-          >
-            카카오로 시작하기
-          </ActionAreaButton>
-          <ActionAreaButton
-            buttonColor="assistive"
+
+      <div className="relative flex shrink-0 flex-col gap-2.5 px-5 pb-safe-bottom">
+        <Button
+          fullWidth
+          leadingContent={<IconLogoKakao />}
+          onClick={startWithKakao}
+          size="large"
+          sx={kakaoButtonSx}
+        >
+          카카오로 시작하기
+        </Button>
+        {/* 이메일은 로그인만 큰 버튼으로 두고 가입은 아래 링크로 — 기존 회원은 이메일 로그인 →
+            onboardingCompleted에 따라 홈 또는 /onboarding/nickname으로 간다. */}
+        <Button
+          color="assistive"
+          fullWidth
+          onClick={() => navigate("/login/email")}
+          size="large"
+          sx={glassButtonSx}
+        >
+          이메일로 로그인
+        </Button>
+        <div className="flex justify-center gap-4 py-3">
+          <TextButton
             onClick={() => navigate("/login/email-signup")}
-            sx={{ backgroundColor: "var(--color-surface)" }}
-            variant="alternative"
+            size="small"
+            sx={linkSx}
           >
-            이메일로 가입하기
-          </ActionAreaButton>
-          <ActionAreaButton
-            onClick={() => navigate("/login/email")}
-            variant="sub"
+            회원가입
+          </TextButton>
+          {/* 처리방침 문서 주소가 아직 없다 — 자리만 잡아 둔다. */}
+          <TextButton
+            onClick={() =>
+              toast({ content: "개인정보 처리방침은 준비 중이에요" })
+            }
+            size="small"
+            sx={dimLinkSx}
           >
-            이메일 로그인
-          </ActionAreaButton>
-        </ActionArea>
+            개인정보 처리방침
+          </TextButton>
+        </div>
       </div>
     </div>
   );
