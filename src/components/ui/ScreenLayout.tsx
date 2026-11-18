@@ -65,7 +65,10 @@ interface ScreenLayoutProps {
 // 넣는다. 화면마다 다른 헤더·위쪽 그라데이션은 useScreenHeader·useScreenBackdrop 훅으로 등록한다.
 // 하단 탭·미니 플레이어 유무는 라우트 handle(hasBottomNav·hasMiniPlayer)로 정한다.
 //
-// 높이는 뷰포트를 꽉 채우고(h-dvh), 폭만 데스크톱(sm 이상)에서 480px로 묶는다.
+// 폰에서는 프레임을 화면 네 변에 붙여(fixed inset-0) 꽉 채운다. 높이를 100dvh로 잡으면 iOS 홈 화면
+// 앱(standalone + black-translucent 상태 표시줄)이 처음 켤 때 dvh를 상태 표시줄만큼 짧게 계산해
+// 바닥이 비어 있다가, 한 번 쓸어 올려야 다시 재서 채워진다. 네 변 고정은 처음부터 정확하다.
+// 데스크톱(sm 이상)에서만 480px 가운데 컬럼으로 세우고 높이는 h-dvh로 둔다.
 // 세이프에어리어는 env(safe-area-inset-*)로 확보한다(index.html의 viewport-fit=cover와 한 쌍).
 function ScreenLayout({
   fullBleed = false,
@@ -105,7 +108,7 @@ function ScreenLayout({
   return (
     <ScreenHeaderContext.Provider value={setHeader}>
       <ScreenChromeContext.Provider value={chrome}>
-        <div className="view-transition-frame relative flex h-dvh w-full flex-col overflow-hidden bg-background sm:w-120 sm:shadow-2xl">
+        <div className="view-transition-frame fixed inset-0 flex flex-col overflow-hidden bg-background sm:relative sm:inset-auto sm:h-dvh sm:w-120 sm:shadow-2xl">
           {backdrop && (
             <div
               aria-hidden
