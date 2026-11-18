@@ -1,131 +1,127 @@
-import {
-  List,
-  ListCell,
-  ListCellContent,
-  TextButton,
-  Typography,
-} from "@wanteddev/wds";
-import {
-  IconCalendar,
-  IconChevronRightTightSmall,
-  IconLocation,
-  IconPersons,
-} from "@wanteddev/wds-icon";
+import { Typography } from "@wanteddev/wds";
+import { IconMoreVertical } from "@wanteddev/wds-icon";
 import type { ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import mascotMusic from "@/assets/mascot/music.png";
-import Badge from "@/components/ui/Badge";
+import CoverRow from "@/components/list/CoverRow";
+import TrackRow from "@/components/list/TrackRow";
+import { coverToneOf } from "@/components/music/Cover";
+import ActionSheet from "@/components/ui/ActionSheet";
 import BottomActionArea from "@/components/ui/BottomActionArea";
+import CoverHero from "@/components/ui/CoverHero";
 import EmptyState from "@/components/ui/EmptyState";
-import PressableCard from "@/components/ui/PressableCard";
+import HeaderIconButton from "@/components/ui/HeaderIconButton";
+import ScreenBody from "@/components/ui/ScreenBody";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import SectionHeader from "@/components/ui/SectionHeader";
-import { useScreenHeader } from "@/components/ui/useScreenHeader";
-import ShowSectionTabBar from "@/features/show/components/ShowSectionTabBar";
+import Status from "@/components/ui/Status";
 import {
+  useScreenBackdrop,
+  useScreenHeader,
+} from "@/components/ui/useScreenHeader";
+import {
+  canManagePerformance,
   getMyPerformanceTeams,
   isPerformanceGroupMember,
 } from "@/features/show/performanceAccess";
 import { formatDateTime, formatDday } from "@/lib/domain/format";
-import { GENRE_LABEL, PERFORMANCE_STATUS_LABEL } from "@/lib/domain/labels";
-import type { SetlistItem } from "@/lib/domain/types";
+import { PERFORMANCE_STATUS_LABEL } from "@/lib/domain/labels";
+import type { Performance, Team } from "@/lib/domain/types";
 import {
   getGroup,
   getPerformance,
   getSong,
+  getSubmittedSongCount,
   getTeam,
   isUpcoming,
   toId,
 } from "@/mocks/selectors";
 
-// Figma: 공연/01 공연 정보. 모임장이면 위에 "공연 정보 | 관리" 탭이 붙는다(ShowSectionTabBar).
+// Figma 20 공연 상세 — 커버 히어로(모임 · 공연 / 이름 / 공연 예정 · D-8) + 일시·장소 + 소개 + 참가 팀.
+// - 참가 팀 행: "내 팀 · 멤버 4명 · 3곡 넘김". 셋리스트를 확정하면 확정곡 목록도 보인다(확정 전엔 팀별
+//   넘긴 곡 수만 — 순서가 없어서).
+// - 하단 버튼: 내 팀이 나가면 "내 팀 보기", 아니면 모임원에게 "공연 팀 만들기"(진행 중인 공연만).
+// - 모임장: ⋮ → 공연 관리 · 셋리스트 확정
+// 끝난 공연(종료·취소)은 서버가 소속 팀을 모두 해체해서 참가 팀이 빈 목록으로 온다.
 
-function InfoCell({
-  icon,
-  label,
-  value,
+function InfoRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-baseline gap-3">
+      <Typography
+        as="dt"
+        className="w-18 shrink-0"
+        color="semantic.label.assistive"
+        variant="label1"
+        weight="medium"
+      >
+        {label}
+      </Typography>
+      <Typography
+        as="dd"
+        className="min-w-0 flex-1"
+        color="semantic.label.strong"
+        variant="body1"
+        weight="medium"
+      >
+        {value}
+      </Typography>
+    </div>
+  );
+}
+
+function TeamMeta({
+  confirmed,
+  isMine,
+  performance,
+  team,
 }: {
-  icon: ReactNode;
-  label: string;
-  value: string;
+  confirmed: boolean;
+  isMine: boolean;
+  performance: Performance;
+  team: Team;
 }) {
+  const songCount = getSubmittedSongCount(performance, team.id);
+  const rest = [
+    `멤버 ${team.members.length}명`,
+    `${songCount}곡 ${confirmed ? "확정" : "넘김"}`,
+  ].join(" · ");
   return (
-    <ListCell
-      alignItems="center"
-      disableInteraction
-      leadingContent={<ListCellContent variant="icon">{icon}</ListCellContent>}
-      textProps={{
-        color: "semantic.label.assistive",
-        variant: "label1",
-        weight: "medium",
-      }}
-      trailingContent={
-        <ListCellContent>
-          <Typography
-            color="semantic.label.normal"
-            variant="label1"
-            weight="medium"
-          >
-            {value}
-          </Typography>
-        </ListCellContent>
-      }
-      verticalPadding="small"
-    >
-      {label}
-    </ListCell>
+    <span className="truncate">
+      {isMine && <span className="text-accent-text">내 팀 · </span>}
+      {rest}
+    </span>
   );
-}
-
-function SongCell({ item, order }: { item: SetlistItem; order?: number }) {
-  const song = getSong(item.songId);
-  const teamName = getTeam(item.teamId)?.name;
-
-  return (
-    <ListCell
-      alignItems="center"
-      disableInteraction
-      leadingContent={
-        order !== undefined ? (
-          <ListCellContent>
-            <Typography
-              color="semantic.primary.normal"
-              variant="body1"
-              weight="bold"
-            >
-              {String(order).padStart(2, "0")}
-            </Typography>
-          </ListCellContent>
-        ) : undefined
-      }
-      textProps={{
-        caption: [song?.artist, order !== undefined ? teamName : undefined]
-          .filter(Boolean)
-          .join(" · "),
-      }}
-      verticalPadding="small"
-    >
-      {song?.title ?? "삭제된 곡"}
-    </ListCell>
-  );
-}
-
-/** 확정 전 셋리스트 — 팀이 넘긴 곡을 팀별로 묶는다(넘긴 순서 유지) */
-function groupByTeam(items: SetlistItem[]) {
-  const groups = new Map<number, SetlistItem[]>();
-  for (const item of items) {
-    groups.set(item.teamId, [...(groups.get(item.teamId) ?? []), item]);
-  }
-  return [...groups.entries()];
 }
 
 function ShowDetailScreen() {
   const navigate = useNavigate();
   const { showId } = useParams();
   const performance = getPerformance(toId(showId));
+  const canManage = performance ? canManagePerformance(performance) : false;
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  useScreenHeader(<ScreenHeader title="공연" />);
+  useScreenHeader(
+    useMemo(
+      () => (
+        <ScreenHeader
+          trailing={
+            canManage ? (
+              <HeaderIconButton
+                icon={<IconMoreVertical />}
+                label="공연 메뉴"
+                onClick={() => setMenuOpen(true)}
+              />
+            ) : undefined
+          }
+        />
+      ),
+      [canManage],
+    ),
+  );
+  useScreenBackdrop(
+    performance ? `cover-${coverToneOf("performance", performance.id)}` : null,
+  );
 
   if (!performance) {
     return (
@@ -140,12 +136,15 @@ function ShowDetailScreen() {
 
   const group = getGroup(performance.groupId);
   const open = isUpcoming(performance);
-  // 끝난 공연(종료·취소)은 서버가 소속 팀을 모두 해체해서 참가 팀을 빈 목록으로 준다.
-  const teams = open
-    ? performance.teamIds.flatMap((id) => getTeam(id) ?? [])
-    : [];
+  const teams = performance.teamIds.flatMap((id) => getTeam(id) ?? []);
   const myTeams = getMyPerformanceTeams(performance);
   const myTeamIds = new Set(myTeams.map((team) => team.id));
+  const confirmed = performance.setlistConfirmed;
+  const confirmedSetlist = confirmed
+    ? [...performance.setlist].sort(
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+      )
+    : [];
 
   // 공연 팀은 진행 중인 공연(공연 예정·팀 모집 중)에만 만들 수 있다. 이미 이 공연에 내 팀이 있으면
   // 새로 만들게 하지 않고 그 팀으로 보낸다. 모임원이 아니면 만들 수 없어서 버튼을 숨긴다.
@@ -156,205 +155,129 @@ function ShowDetailScreen() {
     cta = { label: "공연 팀 만들기", to: `/show/${performance.id}/team/new` };
   }
 
-  const confirmedSetlist = [...performance.setlist].sort(
-    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
-  );
+  const statusLabel = PERFORMANCE_STATUS_LABEL[performance.status];
 
   return (
     <>
-      <ShowSectionTabBar active="info" performance={performance} />
-      <div className="scrollbar-hidden flex-1 overflow-y-auto">
-        <div className="px-5 pt-4">
-          <div className="relative flex aspect-3/2 w-full flex-col justify-end gap-2 overflow-hidden rounded-3xl border border-line-solid bg-surface p-6">
-            {performance.posterImage ? (
-              <>
-                <img
-                  alt=""
-                  className="absolute inset-0 size-full object-cover"
-                  src={performance.posterImage}
-                />
-                <div className="absolute inset-0 bg-linear-to-t from-background to-transparent" />
-              </>
+      <ScreenBody>
+        <CoverHero
+          kicker={group ? `${group.name} · 공연` : "공연"}
+          meta={
+            open ? (
+              <span className="text-accent-text">
+                {statusLabel} · {formatDday(performance.performedAt)}
+              </span>
             ) : (
-              <img
-                alt=""
-                className="absolute top-5 right-5 w-1/4 max-w-28 drop-shadow-neon-sm"
-                src={mascotMusic}
-              />
-            )}
-            <div className="relative flex items-center gap-1.5">
-              <Badge tone={open ? "accent" : "outline"}>
-                {PERFORMANCE_STATUS_LABEL[performance.status]}
-              </Badge>
-              {open && (
-                <Badge tone="solid">
-                  {formatDday(performance.performedAt)}
-                </Badge>
-              )}
-            </div>
-            <Typography
-              as="h1"
-              className="relative"
-              color="semantic.label.strong"
-              variant="title3"
-              weight="bold"
-            >
-              {performance.title}
-            </Typography>
-            {group && (
-              <div className="relative">
-                <TextButton
-                  color="assistive"
-                  onClick={() => navigate(`/crew/${group.id}`)}
-                  size="small"
-                  trailingContent={<IconChevronRightTightSmall />}
-                >
-                  {group.name}
-                </TextButton>
-              </div>
-            )}
-          </div>
-        </div>
+              <span className="text-label-assistive">{statusLabel}</span>
+            )
+          }
+          title={performance.title}
+          tone={coverToneOf("performance", performance.id)}
+        />
 
-        <div className="px-5 py-3">
-          <List>
-            <InfoCell
-              icon={<IconCalendar />}
-              label="일시"
-              value={formatDateTime(performance.performedAt)}
-            />
-            <InfoCell
-              icon={<IconLocation />}
-              label="장소"
-              value={performance.venue}
-            />
-            {open && (
-              <InfoCell
-                icon={<IconPersons />}
-                label="참가 팀"
-                value={`${teams.length}팀`}
-              />
-            )}
-          </List>
-        </div>
+        <dl className="flex flex-col gap-3 px-5">
+          <InfoRow
+            label="일시"
+            value={formatDateTime(performance.performedAt)}
+          />
+          <InfoRow label="장소" value={performance.venue} />
+        </dl>
 
         {performance.description && (
           <>
-            <div className="h-3 bg-surface" />
-            <section className="flex flex-col gap-2 px-5 py-6">
-              <SectionHeader title="공연 소개" />
-              <Typography
-                color="semantic.label.normal"
-                variant="body1"
-                weight="regular"
-              >
-                {performance.description}
-              </Typography>
-            </section>
+            <hr className="mx-5 my-5 border-line-neutral" />
+            <Typography
+              as="p"
+              className="whitespace-pre-line px-5"
+              color="semantic.label.alternative"
+              variant="body2"
+            >
+              {performance.description}
+            </Typography>
           </>
         )}
 
         {open && (
-          <>
-            <div className="h-3 bg-surface" />
-            <section className="flex flex-col gap-3 px-5 py-6">
-              <SectionHeader count={teams.length} title="참가 팀" />
-              {teams.length === 0 ? (
-                <Typography
-                  color="semantic.label.assistive"
-                  variant="label1"
-                  weight="regular"
-                >
-                  아직 참가한 팀이 없어요
-                </Typography>
-              ) : (
-                teams.map((team) => (
-                  <PressableCard
-                    key={team.id}
-                    onClick={() => navigate(`/team/${team.id}`)}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Typography
-                        color="semantic.label.normal"
-                        variant="body1"
-                        weight="bold"
-                      >
-                        {team.name}
-                      </Typography>
-                      {myTeamIds.has(team.id) && <Badge>내 팀</Badge>}
-                    </div>
-                    <Typography
-                      color="semantic.label.assistive"
-                      variant="label2"
-                      weight="medium"
-                    >
-                      {[
-                        team.genres
-                          .map((genre) => GENRE_LABEL[genre])
-                          .join(", "),
-                        `멤버 ${team.members.length}명`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </Typography>
-                  </PressableCard>
-                ))
-              )}
-            </section>
-          </>
+          <section>
+            <SectionHeader
+              status={
+                confirmed ? (
+                  <Status tone="positive">셋리스트 확정</Status>
+                ) : (
+                  <Status tone="neutral">셋리스트 확정 전</Status>
+                )
+              }
+              title={`참가 팀 ${teams.length}`}
+            />
+            {teams.length === 0 ? (
+              <Typography
+                as="p"
+                className="px-5"
+                color="semantic.label.assistive"
+                variant="label2"
+              >
+                아직 참가한 팀이 없어요
+              </Typography>
+            ) : (
+              teams.map((team) => (
+                <CoverRow
+                  key={team.id}
+                  meta={
+                    <TeamMeta
+                      confirmed={confirmed}
+                      isMine={myTeamIds.has(team.id)}
+                      performance={performance}
+                      team={team}
+                    />
+                  }
+                  onClick={() => navigate(`/team/${team.id}`)}
+                  title={team.name}
+                  tone={coverToneOf("team", team.id)}
+                />
+              ))
+            )}
+          </section>
         )}
 
-        <div className="h-3 bg-surface" />
-        <section className="flex flex-col gap-3 px-5 pt-6 pb-8">
-          <SectionHeader
-            title="셋리스트"
-            trailing={
-              <Badge tone={performance.setlistConfirmed ? "accent" : "outline"}>
-                {performance.setlistConfirmed ? "확정" : "확정 전"}
-              </Badge>
-            }
-          />
-          {performance.setlist.length === 0 ? (
-            <Typography
-              color="semantic.label.assistive"
-              variant="label1"
-              weight="regular"
-            >
-              아직 팀들이 넘긴 곡이 없어요
-            </Typography>
-          ) : performance.setlistConfirmed ? (
-            <List>
-              {confirmedSetlist.map((item, index) => (
-                <SongCell
-                  item={item}
+        {confirmedSetlist.length > 0 && (
+          <section>
+            <SectionHeader title={`셋리스트 ${confirmedSetlist.length}곡`} />
+            {confirmedSetlist.map((item, index) => {
+              const song = getSong(item.songId);
+              const teamName = getTeam(item.teamId)?.name;
+              return (
+                <TrackRow
+                  artist={[song?.artist, teamName].filter(Boolean).join(" · ")}
+                  index={index + 1}
                   key={`${item.teamId}-${item.songId}`}
-                  order={index + 1}
+                  title={song?.title ?? "삭제된 곡"}
                 />
-              ))}
-            </List>
-          ) : (
-            // 확정 전에는 순서가 없다 — 팀이 넘긴 곡을 팀별로 보여 준다.
-            groupByTeam(performance.setlist).map(([teamId, items]) => (
-              <div className="flex flex-col gap-1" key={teamId}>
-                <Typography
-                  color="semantic.label.alternative"
-                  variant="label2"
-                  weight="bold"
-                >
-                  {getTeam(teamId)?.name ?? "해체된 팀"} · {items.length}곡
-                </Typography>
-                <List>
-                  {items.map((item) => (
-                    <SongCell item={item} key={item.songId} />
-                  ))}
-                </List>
-              </div>
-            ))
-          )}
-        </section>
-      </div>
+              );
+            })}
+          </section>
+        )}
+      </ScreenBody>
+
       {cta && (
         <BottomActionArea label={cta.label} onClick={() => navigate(cta.to)} />
+      )}
+
+      {canManage && (
+        <ActionSheet
+          items={[
+            {
+              label: "공연 관리",
+              onSelect: () => navigate(`/show/${performance.id}/manage`),
+            },
+            {
+              label: "셋리스트 확정",
+              onSelect: () =>
+                navigate(`/show/${performance.id}/setlist/confirm`),
+            },
+          ]}
+          onOpenChange={setMenuOpen}
+          open={menuOpen}
+        />
       )}
     </>
   );
