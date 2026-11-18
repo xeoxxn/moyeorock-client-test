@@ -2,8 +2,10 @@ import { Typography } from "@wanteddev/wds";
 import { cn } from "@/lib/cn";
 
 // Figma "Feedback/Line"(553:24381) — 구간 피드백 한 줄: 시간(12) + 문장. 가사 화면처럼 지금 구간만
-// 밝게(1), 나머지는 흐리게(0.42) 둔다. 잘 맞은 구간은 문장 대신 ♪.
-// 문장은 05 결과 화면에선 항목 이름과 같은 16 Bold, 18 가사 보기 시트에서만 예외로 22 Bold(lyrics).
+// 밝게(1), 나머지는 흐리게(0.4) 둔다. 잘 맞은 구간은 문장 대신 ♪.
+// - 05 결과 화면 바닥 패널(595:26300): 문장 16 Bold, 시간 tertiary
+// - 18 구간 피드백 시트(lyrics): 문장 22 Bold, 시간 secondary
+// 누를 수 없을 땐 span으로 그려 바닥 패널 같은 버튼 안에도 넣을 수 있다.
 interface FeedbackLineProps {
   time: string;
   text: string;
@@ -23,7 +25,7 @@ function FeedbackLine({
   text,
   time,
 }: FeedbackLineProps) {
-  const Element = onClick ? "button" : "div";
+  const Element = onClick ? "button" : "span";
   return (
     <Element
       className={cn(
@@ -35,7 +37,9 @@ function FeedbackLine({
     >
       <Typography
         as="span"
-        color="semantic.label.alternative"
+        color={
+          lyrics ? "semantic.label.alternative" : "semantic.label.assistive"
+        }
         variant="caption1"
         weight="medium"
       >

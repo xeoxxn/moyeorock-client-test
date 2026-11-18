@@ -1,4 +1,4 @@
-import { Button, ListCell, ListCellContent } from "@wanteddev/wds";
+import { Button, ListCell, ListCellContent, Typography } from "@wanteddev/wds";
 import { IconSetting } from "@wanteddev/wds-icon";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,7 @@ import {
   useScreenHeader,
 } from "@/components/ui/useScreenHeader";
 import ProfileSummary from "@/features/mine/components/ProfileSummary";
+import SessionTiles from "@/features/mine/components/SessionTiles";
 import { daysUntil } from "@/lib/domain/format";
 import { INSTRUMENT_LABEL } from "@/lib/domain/labels";
 import type { Team } from "@/lib/domain/types";
@@ -29,8 +30,9 @@ import {
   getPracticeRecordings,
 } from "@/mocks/selectors";
 
-// Figma 07 마이(419:13011) — Bottom Nav "마이" 탭 루트. 프로필 + 통계(연습 분석 · 팔로잉 · 저장한 곡)
-// + 내 팀 + 메뉴(받은 신청·초대 · 알림 설정 · 계정). 로그아웃·탈퇴와 공개 설정은 /mine/account로 옮겼다.
+// Figma 07 마이(419:13011) — Bottom Nav "마이" 탭 루트. 프로필(이름 + 지역) + 프로필 편집 + 통계(연습 분석 ·
+// 팔로잉 · 저장한 곡) + 내 세션(타일, "수정" → 세션 편집) + 내 팀 + 메뉴(받은 신청·초대 · 알림 설정 · 계정).
+// 로그아웃·탈퇴와 공개 설정은 /mine/account로 옮겼다.
 
 /** "보컬 · 멤버 4명 · 다음 합주 오늘" — 오늘 합주가 없으면 선택곡 수 */
 function getTeamMeta(team: Team): string {
@@ -82,30 +84,18 @@ function MineScreen() {
     <ScreenBody>
       <section className="flex flex-col items-start gap-4 px-5 pt-4">
         <ProfileSummary user={me} />
-        {/* Figma엔 "프로필 편집"만 있다. 세션은 서버 API가 따로라(PUT /users/me/instruments) 편집 화면도
-            따로인데 들어갈 곳이 없어 옆에 하나 더 둔다 — 멤버 프로필(23)의 "초대 · 저장" 두 버튼과 같은 줄. */}
-        <div className="flex gap-2">
-          <Button
-            color="assistive"
-            onClick={() => navigate("/mine/profile")}
-            size="small"
-            variant="outlined"
-          >
-            프로필 편집
-          </Button>
-          <Button
-            color="assistive"
-            onClick={() => navigate("/mine/session")}
-            size="small"
-            variant="outlined"
-          >
-            세션 편집
-          </Button>
-        </div>
+        <Button
+          color="assistive"
+          onClick={() => navigate("/mine/profile")}
+          size="small"
+          variant="outlined"
+        >
+          프로필 편집
+        </Button>
       </section>
 
       {/* 팔로잉 = 유저 북마크(서버 북마크 대상은 유저·팀·곡) */}
-      <div className="flex px-5 pt-7">
+      <div className="flex px-5 pt-6">
         <Stat
           label="연습 분석"
           onClick={() => navigate("/practice")}
@@ -122,6 +112,25 @@ function MineScreen() {
           value={getBookmarkedIds("SONG").length}
         />
       </div>
+
+      {/* 세션은 서버 API가 따로라(PUT /users/me/instruments) 편집 화면도 따로다 — 구역 액션 "수정"으로 간다. */}
+      <SectionHeader
+        actionLabel="수정"
+        onAction={() => navigate("/mine/session")}
+        title="내 세션"
+      />
+      {me.instruments.length > 0 ? (
+        <SessionTiles instruments={me.instruments} />
+      ) : (
+        <Typography
+          as="p"
+          className="px-5"
+          color="semantic.label.assistive"
+          variant="label2"
+        >
+          맡고 있는 세션을 골라 주세요
+        </Typography>
+      )}
 
       <SectionHeader title="내 팀" />
       {teams.length === 0 ? (

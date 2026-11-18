@@ -8,6 +8,7 @@ import ScreenHeader from "@/components/ui/ScreenHeader";
 import TextInputField from "@/components/ui/TextInputField";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
 import StepHeading from "@/features/onboarding/components/StepHeading";
+import { saveSession } from "@/lib/auth/session";
 
 // 이메일 로그인(/login/email) — 08 로그인의 "이메일로 로그인"에서 들어온다. Figma 화면은 없어서 온보딩
 // 단계 화면(22)과 같은 모양(뒤로가기 + 질문 + 입력 + 하단 버튼)으로 둔다.
@@ -22,6 +23,7 @@ function OnboardingEmailLoginScreen() {
   // 목업에서 이메일로 로그인하는 사람은 이미 온보딩을 마친 기존 회원으로 본다. 로그인 화면으로 뒤로
   // 가지 않게 replace.
   const login = () => {
+    saveSession();
     navigate("/", { replace: true });
   };
 

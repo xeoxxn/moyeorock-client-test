@@ -1,5 +1,6 @@
 import { useMatches } from "react-router-dom";
 
+import AppSplash from "@/app/AppSplash";
 import ScreenLayout from "@/components/ui/ScreenLayout";
 
 // 화면별 레이아웃 옵션 — 각 라우트에 `handle: { ... } satisfies ScreenRouteHandle`로 지정한다.
@@ -44,6 +45,7 @@ function ScreenLayoutRoute() {
       hasMiniPlayer={
         resolveScreenRouteOption(handles, "hasMiniPlayer") ?? false
       }
+      overlay={<AppSplash />}
     />
   );
 }

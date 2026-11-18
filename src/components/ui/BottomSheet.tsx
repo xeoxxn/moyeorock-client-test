@@ -12,6 +12,15 @@ import type { ReactNode } from "react";
 // 위쪽 손잡이(Figma "Sheet/Handle" 538:22436)는 WDS handle로 그리고, 제목은 왼쪽 큰 글자(display)다.
 // 닫기 버튼은 Figma에서 구간 피드백처럼 내용이 긴 시트에만 있어 closable로 켠다.
 // 하단 버튼이 필요하면 footer에 WDS ActionArea(BottomActionArea의 inSheet)를 넘긴다.
+//
+// WDS 손잡이 시트는 바깥 누르기·Esc·아래로 끌기를 "닫기"가 아니라 "아래로 접기"(100px만 남기고 열린 채,
+// visibility hidden)로 처리한다. 모여락 시트는 모두 잠깐 띄우는 시트라 접히면 화면을 옮겨도 남아 있고
+// 다음 화면 데이터로 다시 그려진다 — 접히는 순간 닫는다(closeWhenHidden).
+export function closeWhenHidden(onOpenChange: (open: boolean) => void) {
+  return (visibility: "visible" | "hidden") => {
+    if (visibility === "hidden") onOpenChange(false);
+  };
+}
 interface BottomSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,7 +39,11 @@ function BottomSheet({
   title,
 }: BottomSheetProps) {
   return (
-    <Modal onOpenChange={onOpenChange} open={open}>
+    <Modal
+      onOpenChange={onOpenChange}
+      onVisibilityChange={closeWhenHidden(onOpenChange)}
+      open={open}
+    >
       <ModalContainer handle variant="bottom">
         {title !== undefined && (
           <ModalNavigation

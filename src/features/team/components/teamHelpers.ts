@@ -5,9 +5,8 @@ import {
   REGION_LABEL,
   TEAM_KIND_LABEL,
 } from "@/lib/domain/labels";
-import type { Performance, Song, Team } from "@/lib/domain/types";
+import type { Performance, Team } from "@/lib/domain/types";
 import {
-  getAllSongs,
   getPerformance,
   getTeam,
   isPerformanceTeam,
@@ -80,17 +79,6 @@ export function getSongsSubmittedByOtherTeams(
       .filter((item) => item.teamId !== teamId)
       .map((item) => [item.songId, getTeam(item.teamId)?.name ?? ""]),
   );
-}
-
-/**
- * GET /teams/{teamId}/songs/recommendations(AI, 팀원 누구나) 자리. 서버는 팀 장르·팀원 실력으로
- * 최대 10곡을 점수 순으로 준다 — 목업은 팀 장르와 맞는 곡을 앞에 둔다.
- */
-export function getTeamSongRecommendations(team: Team): Song[] {
-  const genres = new Set(team.genres);
-  return [...getAllSongs()]
-    .sort((a, b) => Number(genres.has(b.genre)) - Number(genres.has(a.genre)))
-    .slice(0, 10);
 }
 
 /** 받침이 있으면 "을", 없으면(영문 포함) "를" — "Antifreeze를", "사건의 지평선을" */

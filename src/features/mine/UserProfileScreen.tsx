@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/useScreenHeader";
 import InviteSheet from "@/features/join/InviteSheet";
 import ProfileSummary from "@/features/mine/components/ProfileSummary";
+import SessionTiles from "@/features/mine/components/SessionTiles";
 import { formatDday, formatTime } from "@/lib/domain/format";
 import {
   GROUP_TYPE_LABEL,
@@ -43,7 +44,8 @@ import {
 } from "@/mocks/selectors";
 
 // Figma 23 멤버 프로필(502:20910, /users/:userId) — 멤버 목록·AI 추천·모집글·저장 목록 등 여러 곳에서
-// 들어온다. 아바타 + 이름·세션 + 소개 + 초대·저장 + 소속 팀 · 소속 모임 · 참여 중인 공연.
+// 들어온다. 아바타 + 이름·지역 + 소개 + 초대·저장 + 세션(타일) + 소속 팀 · 소속 모임 · 참여 중인 공연.
+// 세션은 프로필 본문(instruments)이라 활동 공개 설정과 상관없이 보이고, 소속·공연(activities)만 숨는다.
 // 팀 화면에서 들어오면 ?teamId=로 그 팀을 초대 시트에서 미리 고른다. 내 id면 마이로 보낸다.
 // Figma 헤더 오른쪽 더보기(⋮)는 메뉴 항목(신고·차단 등)이 서버에 없어 뺐다.
 
@@ -168,6 +170,13 @@ function UserProfileScreen() {
             </Button>
           </div>
         </section>
+
+        {user.instruments.length > 0 && (
+          <>
+            <SectionHeader title="세션" />
+            <SessionTiles instruments={user.instruments} />
+          </>
+        )}
 
         {activities === null ? (
           <Typography

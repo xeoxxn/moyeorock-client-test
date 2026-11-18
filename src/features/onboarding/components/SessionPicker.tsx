@@ -50,7 +50,8 @@ function SessionPicker({ onChange, value }: SessionPickerProps) {
 
   return (
     <>
-      <div className="grid grid-cols-3 gap-x-3 gap-y-4 px-5">
+      {/* Figma 22 Part Grid — 타일 108 셋이 362에 맞게 사이 가로 19 · 세로 18 */}
+      <div className="grid grid-cols-3 gap-x-4.75 gap-y-4.5 px-5">
         {INSTRUMENT_OPTIONS.map((instrument) => (
           <SessionTile
             instrument={instrument}
@@ -61,8 +62,10 @@ function SessionPicker({ onChange, value }: SessionPickerProps) {
         ))}
       </div>
 
+      {/* Figma 22 Levels — 제목 아래 16, 세션마다 16 간격. SectionHeader 아래 8에 pt-2를 더해 16을 맞춘다.
+          세션 이름은 필드 라벨(14 Medium · text/secondary). */}
       <SectionHeader title="연주 실력" />
-      <div className="flex flex-col gap-5 px-5">
+      <div className="flex flex-col gap-4 px-5 pt-2">
         {selected.length === 0 ? (
           <Typography color="semantic.label.assistive" variant="label2">
             세션을 고르면 세션마다 실력을 정할 수 있어요

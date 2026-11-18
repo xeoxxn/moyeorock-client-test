@@ -89,11 +89,12 @@ function SlotStepper({
 }) {
   const label = INSTRUMENT_LABEL[slot.instrument];
   return (
+    // Figma 24 Slot(508:22350) — 줄 이름은 본문 15(body2), 숫자는 16 Bold 32칸, 버튼 사이 4.
     <div className="flex items-center justify-between gap-3">
-      <Typography color="semantic.label.strong" variant="body2" weight="bold">
+      <Typography color="semantic.label.strong" variant="body2">
         {label} 인원
       </Typography>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1">
         <IconButton
           aria-label={`${label} 인원 줄이기`}
           disabled={slot.count <= 1}
@@ -105,9 +106,9 @@ function SlotStepper({
         </IconButton>
         <Typography
           align="center"
-          className="w-6"
+          className="w-8"
           color="semantic.label.strong"
-          variant="body2"
+          variant="body1"
           weight="bold"
         >
           {slot.count}

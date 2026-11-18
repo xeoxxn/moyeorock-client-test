@@ -38,7 +38,8 @@ import {
   toId,
 } from "@/mocks/selectors";
 
-// Figma 20 공연 상세 — 커버 히어로(모임 · 공연 / 이름 / 공연 예정 · D-8) + 일시·장소 + 소개 + 참가 팀.
+// Figma 20 공연 상세(500:18807) — 커버 히어로(모임 · 공연 / 이름 / 공연 예정 · D-8) + 일시·장소(라벨 14 ·
+// 값 본문 15) + 소개 + 참가 팀(확정 전이면 제목 옆 "셋리스트 확정 전").
 // - 참가 팀 행: "내 팀 · 멤버 4명 · 3곡 넘김". 셋리스트를 확정하면 확정곡 목록도 보인다(확정 전엔 팀별
 //   넘긴 곡 수만 — 순서가 없어서).
 // - 하단 버튼: 내 팀이 나가면 "내 팀 보기", 아니면 모임원에게 "공연 팀 만들기"(진행 중인 공연만).
@@ -61,8 +62,7 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
         as="dd"
         className="min-w-0 flex-1"
         color="semantic.label.strong"
-        variant="body1"
-        weight="medium"
+        variant="body2"
       >
         {value}
       </Typography>
@@ -199,11 +199,12 @@ function ShowDetailScreen() {
 
         {open && (
           <section>
+            {/* 확정 전에만 제목 옆에 "셋리스트 확정 전"을 단다. 확정되면 아래 셋리스트 구역이 그 표시다.
+                확정 여부는 서버 셋리스트 조회(GET /performances/{id}/setlist)의 confirmed — 공연 상세의 setlist가
+                빈 목록이라고 확정 전은 아니다(dto-spec PerformanceDetailResponse). */}
             <SectionHeader
               status={
-                confirmed ? (
-                  <Status tone="positive">셋리스트 확정</Status>
-                ) : (
+                confirmed ? undefined : (
                   <Status tone="neutral">셋리스트 확정 전</Status>
                 )
               }

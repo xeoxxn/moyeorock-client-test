@@ -10,6 +10,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import SectionHeader from "@/components/ui/SectionHeader";
 import Status from "@/components/ui/Status";
 import SongAddSheet from "@/features/team/components/SongAddSheet";
+import SongRecommendSheet from "@/features/team/components/SongRecommendSheet";
 import SubmitSongsSheet from "@/features/team/components/SubmitSongsSheet";
 import { songStatus } from "@/features/team/components/songStatus";
 import TeamFallback from "@/features/team/components/TeamFallback";
@@ -28,6 +29,8 @@ import { getSong, isUpcoming } from "@/mocks/selectors";
 
 // Figma 04 팀·셋리스트(417:12460) → 서버 기준 "선택곡" 탭(팀 쪽은 셋리스트라는 말을 쓰지 않는다).
 // - 선택곡: 팀장이 곡 추가 시트(Figma 16)로 고른다(PUT /teams/{id}/songs, 전체 대체). 팀원은 본다.
+//   곡 추가 시트의 "AI 추천"은 그 시트를 닫고 AI 곡 추천 시트(Figma 26~28)를 띄우고, 추천 시트를 닫으면
+//   곡 추가 시트로 돌아온다(검색어는 그대로). 두 시트의 +/✓는 같은 선택곡 state를 바꾼다.
 // - 공연 팀이면 팀장이 그중 일부를 공연에 넘긴다(PUT /performances/{pid}/setlist/teams/{tid}) — 공연이
 //   진행 중이고 셋리스트 확정 전일 때만, 다른 팀이 이미 넘긴 곡은 빼고. 넘긴 곡은 "후보", 모임장이
 //   확정하면 "확정". 독립 팀은 상태도 넘기기도 없다.
@@ -53,6 +56,7 @@ function TeamSongsContent({ team }: { team: Team }) {
     performance ? getSubmittedSongIds(performance, team.id) : [],
   );
   const [addOpen, setAddOpen] = useState(false);
+  const [recommendOpen, setRecommendOpen] = useState(false);
   const [menuSong, setMenuSong] = useState<Song | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
@@ -219,8 +223,21 @@ function TeamSongsContent({ team }: { team: Team }) {
         <>
           <SongAddSheet
             onOpenChange={setAddOpen}
+            onRecommend={() => {
+              setAddOpen(false);
+              setRecommendOpen(true);
+            }}
             onToggle={toggleSong}
             open={addOpen}
+            selectedIds={songIds}
+          />
+          <SongRecommendSheet
+            onOpenChange={(next) => {
+              setRecommendOpen(next);
+              if (!next) setAddOpen(true);
+            }}
+            onToggle={toggleSong}
+            open={recommendOpen}
             selectedIds={songIds}
             team={team}
           />

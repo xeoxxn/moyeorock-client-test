@@ -4,7 +4,8 @@
 > 대상 파일: [🎨 컨퍼런스 디자인](https://www.figma.com/design/NrVoqKgMPnr2rQ4sOYFV46) (`fileKey: NrVoqKgMPnr2rQ4sOYFV46`), 페이지 "UI 최종 디자인" (`nodeId: 404:10893`)
 > - Foundation(색·글자): 프레임 `410:11069`, 로컬 변수 컬렉션 "모여락 UI", 텍스트 스타일 `모여락/*`
 > - 공통 컴포넌트 보드: `534:21678` — 코드의 공통 컴포넌트와 1:1
-> - 화면: 01 홈 ~ 25 파트 선택 시트(14-B는 14의 대안 시안). 대응표는 각 `src/features/<섹션>/routes.tsx` 머리 주석
+> - 화면: 00 스플래시 ~ 30 연습 분석 실패(14-B는 14의 대안 시안). 대응표는 각 `src/features/<섹션>/routes.tsx` 머리 주석
+> - 글자 위계·구역 규칙 패널: `571:24140`(보드 맨 위)
 > WDS 라이브러리 키: `lk-01f447137a741b37c25896e9a4e109dcb719fa4e54177be9a39d24b8da507c109279c2d1d0533b9943595d7d6a5ea398977f43b5d84e163797965d810ba79b69`
 
 ## 배경
@@ -15,14 +16,14 @@ Figma는 Pretendard 대신 Noto Sans KR로 그려져 있다 — 코드는 WDS �
 
 ## 화면 구현 시 반드시 지킬 것
 
-1. **Figma의 "화면" ≠ 라우트 1개.** 시트(16·17·18·25)·빈 상태(15)·대안 시안(14-B)은 같은 화면 안의 상태다. 새 라우트를 만들지 않는다.
+1. **Figma의 "화면" ≠ 라우트 1개.** 시트(16·17·18·25·26~28)·빈 상태(15)·대안 시안(14-B)·분석 상태(29 비교 중·30 실패는 `/practice/:id`가 상태로 그린다)·스플래시(00)는 같은 화면 안의 상태다. 새 라우트를 만들지 않는다.
 2. **상태 표시줄(9:41)·홈 막대는 구현하지 않는다.** 실기기 흉내 장식이다. 상단 안전영역은 `ScreenLayout`의 `pt-safe-top`이 맡는다.
 3. **색·크기를 화면 파일에 하드코딩하지 않는다.** `src/index.css`의 토큰(아래 표)이나 WDS `Typography`/색 토큰 문자열만 쓴다. 새 값이 필요하면 `@theme`에 토큰을 추가한다.
 4. **WDS를 무조건 쓴다.** 버튼·입력·목록·탭·배지·아바타·시트는 WDS 컴포넌트에 `sx`로 색·여백만 맞춘다. 맨 `<input>/<select>/<textarea>`는 쓰지 않는다(녹음 파일 고르기의 숨긴 `<input type="file">`만 예외).
 5. **고정 픽셀 임의값 금지.** `h-[52px]` 대신 Tailwind 스케일(`h-13`·`size-30`·`h-90`)이나 분수(`h-1/3`). 커버 글자처럼 크기에 비례해야 하면 컨테이너 쿼리 단위(`cover-label`). WDS `sx`의 길이는 rem.
 6. **에셋은 `src/assets/`에 받아 둔다.** Figma 임시 URL은 7일 뒤 만료된다. 로고 `brand/`, 알림 아이콘 `notify/`, 시작 화면 사진 `photo/`, 플레이어 아이콘 `player/`, 목업 프로필 `avatar/`.
 7. **화면 데이터는 `@/mocks/selectors`에서 라우트 파라미터로 찾는다.** 모양은 서버 DTO(`src/lib/domain/types.ts`), enum 라벨은 `src/lib/domain/labels.ts`, 날짜 표기는 `src/lib/domain/format.ts`만 쓴다.
-8. **Figma와 서버(`D-X-W-Service-2/moyeorock-server`)가 엇갈리면 서버가 정답이다.** 이번 리디자인에서 정한 것: 팀 쪽 "셋리스트" 탭 → "선택곡"(넘긴 곡 = 후보, 모임장 확정 = 확정), 독립 팀은 공연에 곡을 넘기지 못함, 공연 팀은 모집글을 못 올림, 모집글엔 일정·장르·조회수 없음, 공지 목록엔 작성자 없음, 연습 녹음은 3~60초·1.95MB 이하, 지역은 시·도 단위, 합주엔 참석 인원 없음(멤버 수), 알림 설정·공유 API 없음, 전체 모임 검색 없음(모임 찾기 → 게시판 모임 모집).
+8. **Figma와 서버(`D-X-W-Service-2/moyeorock-server`)가 엇갈리면 서버가 정답이다.** 이번 리디자인에서 정한 것: 팀 쪽 "셋리스트" 탭 → "선택곡"(넘긴 곡 = 후보, 모임장 확정 = 확정), 독립 팀은 공연에 곡을 넘기지 못함, 공연 팀은 모집글을 못 올림, 모집글엔 일정·장르·조회수 없음, 공지 목록엔 작성자 없음, 연습 녹음은 3~60초·1.95MB 이하, 지역은 시·도 단위, 합주엔 참석 인원 없음(멤버 수), 알림 설정·공유 API 없음, 전체 모임 검색 없음(모임 찾기 → 게시판 모임 모집). 이후 추가: AI 곡 추천 행의 근거는 백엔드 문장 그대로("팀 장르 일치: 팝" · "… 난이도 초과"는 주황), "다른 팀도 골랐어요"는 공연 팀에서만(독립 팀은 selectedByOtherTeam이 항상 false), 연습 구간 피드백은 서버 고정 문장이 구간을 되풀이해서 시간은 라벨로 빼고 "원곡과 다르게 연주했어요"만 보인다, 구간 피드백의 "팀에 공유" 없음.
 9. **글자 위계**: 화면·대표 이름 22 Bold > 구역 제목 20 Bold > 목록·카드 항목 이름 16 Bold(큰 카드도 16) > 선반 타일 이름·필드 라벨 14 Medium > 본문 15 > 보조 13 > 작은 라벨 12. 시간·날짜·통계 숫자만 예외로 `font-number`(Archivo Black)로 크게. 구역은 선 대신 여백으로 나누고 구역 제목은 모두 `SectionHeader`.
 10. **문구는 짧게**("다시 고르기" → "변경", "~하기" 남발 금지). 같은 의미의 상태는 `Status` 하나로. 카드 오른쪽 액션은 제목 줄 높이에.
 
@@ -30,6 +31,8 @@ Figma는 Pretendard 대신 Noto Sans KR로 그려져 있다 — 코드는 WDS �
 
 - **`useAlert`에 문자열 라벨을 넘기면 앱 전체가 내려간다.** WDS AlertArea가 `confirm`/`cancel`을 `Slot`으로 감싸 onClick을 꽂기 때문에 React 엘리먼트여야 한다("Slot failed to slot onto its Slottable"). 화면에서는 `useAlert` 대신 `@/components/ui/useAppAlert`를 쓴다 — 라벨 문자열만 넘기면 `AlertActionAreaButton`으로 감싸 준다.
 - **`ListCell`은 행을 누르면 안쪽 첫 버튼을 대신 한 번 더 누른다.** chevron(`ListCellContent variant="chevron"`도 role=button)이 있는 행에 onClick을 걸면 이동이 두 번 되고, 행 안의 보조 버튼(거절·초대·저장 토글)은 행만 눌러도 같이 눌린다. 행 onClick은 `rowClick(handler)`, 행 안의 버튼은 `innerClick(handler)`로 감싼다(`@/components/ui/listCellEvents`). WDS가 `composeEventHandlers`로 우리 핸들러를 먼저 부르고 `defaultPrevented`면 대신 누르기를 건너뛰는 점을 이용한다.
+- **손잡이(handle) 바텀 시트는 바깥 누르기·Esc·아래로 끌기를 "닫기"가 아니라 "아래로 접기"(100px만 남기고 열린 채)로 처리한다.** 접힌 시트는 화면을 옮겨도 남아 다음 화면 데이터로 다시 그려진다. `BottomSheet`·`ConfirmSheet`는 `onVisibilityChange`로 접히는 순간 닫는다(`closeWhenHidden`) — 시트를 새로 만들 때도 이 둘을 쓴다.
+- **WDS `List`의 margin은 Tailwind 클래스를 이긴다.** `<List className="-mx-5">`는 먹지 않는다 — 시트 여백만큼 당기려면 `<div className="-mx-5"><List>…</List></div>`로 감싼다.
 - **`ModalContent`는 좌우 여백을 주지 않는다.** 여백은 `ModalContentItem`이 준다 — 시트는 `BottomSheet`를 쓰면 이미 처리돼 있다.
 - **Tailwind 클래스로 WDS 컴포넌트 모양(radius 등)을 덮을 수 없다.** WDS 스타일(emotion)이 우선한다. 꼭 바꿔야 하면 `sx`로.
 
@@ -76,12 +79,13 @@ WDS non-title `bold`는 600이다(Figma Bold 700과 차이는 그대로 둔다).
 | Header/Page · Header/Icon Button | `components/ui/ScreenHeader`(variant home·title·tabs·normal) · `components/ui/HeaderIconButton` | TopNavigation · Tab |
 | Header/Cover Hero | `components/ui/CoverHero` (+ 히어로 아래 탭 `components/ui/HeroTabs`) | Typography · Tab |
 | List/Cover Row (· 상태) · Person · Event · Track · Post · Song Result · Notification · Notice · Action Row | `components/list/*Row` — 뼈대는 `MediaRow` | ListCell · Avatar · Button · IconButton |
-| Avatar/Labeled · Stat · Calendar/Day · Session Tile · Feedback/Line | `components/ui/LabeledAvatar` · `Stat` · `CalendarDay` · `SessionTile` · `FeedbackLine` | Avatar · WithInteraction |
+| Avatar/Labeled · Stat · Calendar/Day · Session Tile · Feedback/Line | `components/ui/LabeledAvatar` · `Stat` · `CalendarDay` · `SessionTile`(`level`을 넘기면 실력 줄, `onToggle`을 넘기면 고르기 타일 — 22는 실력 줄 숨김) · `FeedbackLine` | Avatar · WithInteraction |
+| Loader/Logo · Loader/Wave | `components/ui/LoaderLogo`(기다리는 화면의 주인공 — 26 · 29) · `LoaderWave`(버튼·목록·단계 표시, currentColor) | — (CSS `loader-logo-bars` · `loader-wave`) |
 | Card/Practice Tile · Card/Song Pick · Card/Recording | `components/card/PracticeTile` · `PickCard`(SongPickCard·RecordingCard) | WithInteraction · TextButton |
 | Bottom CTA | `components/ui/BottomActionArea` | ActionArea |
 | Sheet/Handle · 17 확정 시트 | `components/ui/BottomSheet`(WDS handle) · `components/ui/ConfirmSheet` | Modal bottom · ActionArea |
 | 15 빈 상태 | `components/ui/EmptyState` | FallbackView |
-| Cover · Waveform · Music/Now Playing · Music/Mini Player · Brand/* | `components/music/Cover`(`PART_COVER_TONE`, `coverToneOf`) · `Waveform` · `NowPlaying` · `MiniPlayer` · `Brand`(BrandLogo·BrandLogoStacked·BrandSymbol) | — |
+| Cover · Waveform · Music/Now Playing · Music/Mini Player · Brand/* | `components/music/Cover`(`PART_COVER_TONE`, `coverToneOf`) · `Waveform` · `NowPlaying` · `MiniPlayer` · `Brand`(BrandLogo·BrandLogoStacked·BrandSymbol, 도형은 `brandPaths.ts`) | — |
 
 화면 뼈대는 `useScreenHeader(<ScreenHeader/>)` + `useScreenBackdrop(...)` + `<ScreenBody>`(스크롤, 미니 플레이어 아래 여백 자동) + (있으면) `<BottomActionArea>`다. 헤더 JSX는 `useMemo`로 감싼다.
 
@@ -92,6 +96,23 @@ WDS non-title `bold`는 600이다(Figma Bold 700과 차이는 그대로 둔다).
 하단 탭은 WDS `BottomNavigation`(**홈 · 일정 · 모임 · 게시판 · 마이**). 바탕 bg/base 88% + 위 흰 8% 선, 고른 탭은 채운 아이콘(`Icon*Fill`) + 흰색. `data-scroll-end` 투명 처리와 선택색(주홍)은 sx로 덮는다. 활성 탭은 경로 접두사(`ScreenLayout`의 `TAB_PREFIXES`)로 정한다 — 모임 탭은 `/crew`·`/team`·`/show`·`/users`, 연습 분석(`/practice`)은 홈.
 
 하단 탭·미니 플레이어 유무는 라우트 `handle`(`hasBottomNav`·`hasMiniPlayer`)로 정한다. Figma대로 팀·모임·공연 상세와 멤버 프로필은 하단 탭을 유지하고(모임 탭), 폼·온보딩·연습 분석 결과·알림·모집글 상세는 숨긴다. 미니 플레이어(지금 듣는 연습 녹음)는 탭 루트 5개와 연습 분석 목록에만 떠 있고, 뒤에 `bottom-fade`가 깔린다.
+
+## 로딩 애니메이션
+
+보드 `589:24247`(Loader/Logo) · `589:24272`(Loader/Wave). 애니메이션은 `src/index.css` 맨 아래에 있고, 동작 줄이기(`prefers-reduced-motion`)에서는 멈춘다.
+
+- **LoaderLogo**: 주홍 피크 + 진한 막대 3개. 막대가 왼쪽부터 0.2초 간격으로 `scaleY 1 → 1.5 / 1.2 / 1.4 → 1`(ease-out-back `cubic-bezier(0.45, 1.45, 0.8, 1)`), 2.4초 반복, 가운데 기준. **목표 배율은 막대가 피크 밖으로 나가지 않게 맞춘 값이라 바꾸지 않는다.** 피크와 막대를 따로 그려야 해서 `BrandSymbol`(막대 구멍을 뚫은 한 덩어리)이 아니라 `brandPaths.ts`의 외곽선 + 막대 `<rect>`로 그린다.
+- **LoaderWave**: 막대 5개가 차례로 늘었다 줄었다 한다(2.4초). 막대 폭·간격이 전체 폭의 1/9이라 `className`으로 크기만 바꾼다(기본 `w-9 h-6`, 단계 표시 `w-4.5 h-3`).
+
+## 앱 첫 진입 — 스플래시(00) → 로그인(08)
+
+`src/app/AppSplash.tsx`가 `ScreenLayout`의 `overlay`로 앱 컬럼 전체를 덮는다. 진행 단계는 `src/app/intro.ts`(`useIntroPhase`)에 있고 로그인 화면이 같이 본다.
+
+1. 인증 확인(`src/lib/auth/session.ts`의 `hasSession` — 백엔드 연동 전이라 localStorage 표시)을 하는 동안 주홍 바탕 + 검은 세로 로고(로그인 로고의 1.5배)를 가운데 띄우고 막대 웨이브를 **한 번** 돌린다(0.3초부터 0.18초 간격, LoaderLogo와 같은 배율·곡선). 갈 화면은 처음부터 스플래시 뒤에 깔아 둔다.
+2. 로그인 전이면 0.8초 ease-in-out으로 주홍 바탕이 사라지고, 로고가 작아지며 로그인 화면 로고 자리로 옮겨 가고(공유 요소), 색이 검정에서 원래 색(피크 주홍 · 막대 진한색 · 워드마크 흰색)으로 돌아온다. 로그인 화면은 그동안 자기 로고를 숨기고 사진·부제·버튼을 페이드인한다.
+3. 이미 로그인했으면 로고째 페이드아웃하고 열려던 화면(기본 홈)을 보여 준다.
+
+로그인 표시는 이메일 로그인·가입 완료(09)에서 남기고 로그아웃·탈퇴에서 지운다. 안드로이드 홈 화면 실행 스플래시가 이 화면과 이어지도록 `public/manifest.webmanifest`의 `background_color`는 `#C64537`이다(`theme_color`는 `#101012` 그대로).
 
 ## 아이콘
 

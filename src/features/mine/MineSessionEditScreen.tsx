@@ -12,7 +12,7 @@ import SessionPicker, {
 } from "@/features/onboarding/components/SessionPicker";
 import { getMe } from "@/mocks/selectors";
 
-// 세션 편집(/mine/session) — 마이의 "세션 편집"에서 들어온다. Figma 화면은 없어서 온보딩 세션 선택
+// 세션 편집(/mine/session) — 마이 "내 세션" 구역의 "수정"에서 들어온다. Figma 화면은 없어서 온보딩 세션 선택
 // (Figma 22)과 같은 본문을 쓴다. 서버 PUT /users/me/instruments {instruments[{instrument, level}]}는 전체
 // 교체라 빠진 세션은 지워지고, 빈 목록은 받지 않는다(@NotEmpty).
 function MineSessionEditScreen() {

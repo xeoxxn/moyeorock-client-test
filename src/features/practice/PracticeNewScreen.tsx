@@ -3,6 +3,7 @@ import { IconSearch, IconUpload } from "@wanteddev/wds-icon";
 import {
   type ChangeEvent,
   type ReactNode,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -12,9 +13,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { RecordingCard, SongPickCard } from "@/components/card/PickCard";
 import Cover, { coverToneOf, PART_COVER_TONE } from "@/components/music/Cover";
 import BottomActionArea from "@/components/ui/BottomActionArea";
+import LoaderWave from "@/components/ui/LoaderWave";
 import ScreenBody from "@/components/ui/ScreenBody";
 import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useScreenHeader } from "@/components/ui/useScreenHeader";
+import AnalysisInProgressSheet from "@/features/practice/components/AnalysisInProgressSheet";
 import PartSelectSheet from "@/features/practice/components/PartSelectSheet";
 import PickPlaceholder from "@/features/practice/components/PickPlaceholder";
 import SongSelectSheet from "@/features/practice/components/SongSelectSheet";
@@ -23,7 +26,10 @@ import {
   RECORDING_ACCEPT,
   RECORDING_LIMIT,
 } from "@/features/practice/practiceHelpers";
-import { requestPracticeAnalysis } from "@/features/practice/practiceStore";
+import {
+  requestPracticeAnalysis,
+  uploadPracticeAudio,
+} from "@/features/practice/practiceStore";
 import { formatDuration } from "@/lib/domain/format";
 import { INSTRUMENT_LABEL, INSTRUMENT_OPTIONS } from "@/lib/domain/labels";
 import type { Instrument, SongSummary } from "@/lib/domain/types";
@@ -32,9 +38,12 @@ import { getMe, getSong } from "@/mocks/selectors";
 // Figma 11 새 연습 분석(424:14695) + 25 파트 선택 시트. 서버 흐름(§13): 업로드 URL 발급 → 녹음 PUT →
 // 곡(songId) · 파트(part) · 녹음(audioUrl) · 제목으로 분석 요청(202 SUBMITTED). 제목은 서버 필수값이라
 // "{곡} {파트} 연습"으로 만들어 보낸다. 녹음은 3~60초 · 1.95MB 이하 mp3·m4a·wav만 받는다.
-// "다시 녹음"(구간 피드백 시트)에서 오면 ?songId=&part=로 곡·파트가 채워져 있다.
+// "분석하기"를 누르면 올리는 동안 버튼에 작은 웨이브를 띄우고, 요청이 받아지면 그 녹음의 비교 중(29)
+// 화면으로 replace한다. 진행 중인 내 분석이 이미 있으면(409) 그 녹음으로 가는 시트를 띄운다.
+// "다시 녹음"·"다른 녹음"·"새 녹음 올리기"에서 오면 ?songId=&part=로 곡·파트가 채워져 있다.
 
 interface PickedRecording {
+  file: File;
   fileName: string;
   sizeBytes: number;
   durationSec: number;
@@ -98,7 +107,17 @@ function PracticeNewScreen() {
   const [recording, setRecording] = useState<PickedRecording | null>(null);
   const [songSheetOpen, setSongSheetOpen] = useState(false);
   const [partSheetOpen, setPartSheetOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [inProgressOpen, setInProgressOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 올리는 동안 화면을 떠났으면 분석을 요청하지 않는다.
+  const leftRef = useRef(false);
+  useEffect(() => {
+    leftRef.current = false;
+    return () => {
+      leftRef.current = true;
+    };
+  }, []);
 
   useScreenHeader(useMemo(() => <ScreenHeader title="새 연습 분석" />, []));
 
@@ -133,12 +152,22 @@ function PracticeNewScreen() {
       });
       return;
     }
-    setRecording({ durationSec, fileName: file.name, sizeBytes: file.size });
+    setRecording({
+      durationSec,
+      file,
+      fileName: file.name,
+      sizeBytes: file.size,
+    });
   };
 
-  const submit = () => {
-    if (!song || !part || !recording) return;
-    requestPracticeAnalysis({
+  const submit = async () => {
+    if (!song || !part || !recording || uploading) return;
+    setUploading(true);
+    const audioUrl = await uploadPracticeAudio(recording.file);
+    if (leftRef.current) return;
+    setUploading(false);
+    const result = requestPracticeAnalysis({
+      audioUrl,
       durationSec: recording.durationSec,
       part,
       song,
@@ -147,8 +176,11 @@ function PracticeNewScreen() {
         TITLE_MAX_LENGTH,
       ),
     });
-    toast({ content: "분석을 시작했어요", variant: "positive" });
-    navigate("/practice", { replace: true });
+    if (!result.ok) {
+      setInProgressOpen(true);
+      return;
+    }
+    navigate(`/practice/${result.recording.id}`, { replace: true });
   };
 
   return (
@@ -234,7 +266,16 @@ function PracticeNewScreen() {
 
       <BottomActionArea
         disabled={!song || !part || !recording}
-        label="분석하기"
+        label={
+          uploading ? (
+            <>
+              <LoaderWave />
+              <span className="sr-only">녹음 올리는 중</span>
+            </>
+          ) : (
+            "분석하기"
+          )
+        }
         onClick={submit}
       />
 
@@ -252,6 +293,11 @@ function PracticeNewScreen() {
         onSelect={setPart}
         open={partSheetOpen}
         value={part}
+      />
+      <AnalysisInProgressSheet
+        onOpenChange={setInProgressOpen}
+        open={inProgressOpen}
+        replace
       />
     </>
   );
