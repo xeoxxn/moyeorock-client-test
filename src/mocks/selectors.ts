@@ -1,6 +1,8 @@
 import type {
   Group,
+  Instrument,
   Performance,
+  PracticeRecording,
   RecruitPost,
   Song,
   Team,
@@ -14,7 +16,9 @@ import {
   JOIN_REQUESTS,
   ME_ID,
   NOTICES,
+  NOTIFICATIONS,
   PERFORMANCES,
+  PRACTICE_RECORDINGS,
   RECRUIT_POSTS,
   REHEARSALS,
   SONGS,
@@ -205,4 +209,114 @@ export function getSentInvitations(
 
 export function getBookmarks() {
   return BOOKMARKS;
+}
+
+/** 내 북마크 중 대상 종류별 id */
+export function getBookmarkedIds(targetType: "USER" | "TEAM" | "SONG") {
+  return BOOKMARKS.filter((b) => b.targetType === targetType).map(
+    (b) => b.targetId,
+  );
+}
+
+export function isBookmarked(
+  targetType: "USER" | "TEAM" | "SONG",
+  targetId: number,
+): boolean {
+  return BOOKMARKS.some(
+    (b) => b.targetType === targetType && b.targetId === targetId,
+  );
+}
+
+/** GET /notifications — 최신순 */
+export function getNotifications() {
+  return [...NOTIFICATIONS].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  );
+}
+
+export function hasUnreadNotifications(): boolean {
+  return NOTIFICATIONS.some((n) => !n.isRead);
+}
+
+export function getInvitation(id: number) {
+  return INVITATIONS.find((invitation) => invitation.id === id);
+}
+
+export function getJoinRequest(id: number) {
+  return JOIN_REQUESTS.find((request) => request.id === id);
+}
+
+/** GET /users/me/practice-recordings — 요청한 시각 최근 순 */
+export function getPracticeRecordings(): PracticeRecording[] {
+  return [...PRACTICE_RECORDINGS].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  );
+}
+
+export function getPracticeRecording(
+  id: number,
+): PracticeRecording | undefined {
+  return PRACTICE_RECORDINGS.find((recording) => recording.id === id);
+}
+
+/** 미니 플레이어가 띄우는 "지금 듣는 연습 녹음" — 가장 최근에 분석이 끝난 녹음 */
+export function getNowPlayingRecording(): PracticeRecording | undefined {
+  return getPracticeRecordings().find(
+    (recording) => recording.status === "DONE",
+  );
+}
+
+/** 공연에서 이 팀이 넘긴 곡 수 */
+export function getSubmittedSongCount(
+  performance: Performance,
+  teamId: number,
+): number {
+  return performance.setlist.filter((item) => item.teamId === teamId).length;
+}
+
+/** 내 팀에서 내가 맡은 세션 */
+export function getMyInstrumentInTeam(team: Team): Instrument | undefined {
+  return team.members.find((member) => member.user.id === ME_ID)?.instrument;
+}
+
+/** 이 팀의 다음 합주(지금 이후 가장 가까운 것) */
+export function getNextTeamRehearsal(teamId: number, now = new Date()) {
+  return getTeamRehearsals(teamId).find(
+    (rehearsal) => new Date(rehearsal.endsAt) >= now,
+  );
+}
+
+/** GET /teams/{id}/members/recommendations — AI 팀원 추천(팀장만). 팀원이 아닌 사용자 중 몇 명. */
+export function getRecommendedMembers(team: Team) {
+  const memberIds = new Set(team.members.map((member) => member.user.id));
+  const reasons: Record<number, string> = {
+    4: "서울 · 펑크 취향이 비슷해요",
+    5: "서울 · 주말 합주 가능",
+    6: "경기 · R&B를 즐겨 들어요",
+    7: "서울 · 팝 취향이 비슷해요",
+    10: "서울 · 재즈 보컬",
+  };
+  return USERS.filter((u) => !memberIds.has(u.id) && reasons[u.id])
+    .slice(0, 3)
+    .map((u) => ({ reason: reasons[u.id], user: u }));
+}
+
+/** 다른 사용자가 속한 팀과 그 팀에서 맡은 세션(타인 프로필 activities.teams) */
+export function getUserTeams(userId: number) {
+  return TEAMS.flatMap((team) => {
+    const member = team.members.find((item) => item.user.id === userId);
+    return member ? [{ instrument: member.instrument, team }] : [];
+  });
+}
+
+/** 다른 사용자가 속한 모임(타인 프로필 activities.groups) */
+export function getUserGroups(userId: number): Group[] {
+  return GROUPS.filter((group) =>
+    getGroupMembers(group.id).some((member) => member.userId === userId),
+  );
+}
+
+/** GET /users/nickname/check — 다른 사용자가 이미 쓰는 닉네임인지 */
+export function isNicknameTaken(nickname: string): boolean {
+  return USERS.some((u) => u.id !== ME_ID && u.nickname === nickname);
 }

@@ -5,7 +5,9 @@ import type {
   Instrument,
   JoinStatus,
   Level,
+  NotificationType,
   PerformanceStatus,
+  PracticeStatus,
   RecruitStatus,
   Region,
   TargetType,
@@ -31,6 +33,16 @@ export const INSTRUMENT_LABEL: Record<Instrument, string> = {
   EL_GT: "일렉 기타",
   KEY: "키보드",
   VOCAL: "보컬",
+};
+
+/** 커버(앨범 아트) 안에 크게 쓰는 파트 영문 이름 — Archivo Black. 기타는 일렉·어쿠스틱을 꼭 구분한다. */
+export const INSTRUMENT_COVER_LABEL: Record<Instrument, string> = {
+  AC_GT: "Acoustic Guitar",
+  BASS: "Bass",
+  DRUM: "Drums",
+  EL_GT: "Electric Guitar",
+  KEY: "Keys",
+  VOCAL: "Vocal",
 };
 
 export const LEVEL_OPTIONS: Level[] = [
@@ -118,8 +130,8 @@ export const REGION_LABEL: Record<Region, string> = {
 export const GROUP_TYPE_OPTIONS: GroupType[] = ["REGULAR", "PROJECT"];
 
 export const GROUP_TYPE_LABEL: Record<GroupType, string> = {
-  PROJECT: "프로젝트형",
-  REGULAR: "정기형",
+  PROJECT: "프로젝트 모임",
+  REGULAR: "정기 모임",
 };
 
 export const GROUP_ROLE_LABEL: Record<GroupRole, string> = {
@@ -153,7 +165,7 @@ export const TARGET_TYPE_LABEL: Record<TargetType, string> = {
 
 export const RECRUIT_STATUS_LABEL: Record<RecruitStatus, string> = {
   CLOSED: "모집 완료",
-  OPEN: "모집중",
+  OPEN: "모집 중",
 };
 
 export const JOIN_STATUS_LABEL: Record<JoinStatus, string> = {
@@ -161,6 +173,30 @@ export const JOIN_STATUS_LABEL: Record<JoinStatus, string> = {
   CANCELED: "취소됨",
   PENDING: "대기 중",
   REJECTED: "거절됨",
+};
+
+/** 분석 요청 직후(SUBMITTED)와 분석 중(ANALYZING)은 사용자에게 같은 "분석 중"이다. */
+export const PRACTICE_STATUS_LABEL: Record<PracticeStatus, string> = {
+  ANALYZING: "분석 중",
+  DONE: "분석 완료",
+  FAILED: "분석 실패",
+  SUBMITTED: "분석 중",
+};
+
+/** 알림 종류 이름(알림 행 위의 작은 라벨) */
+export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
+  GROUP_INVITE: "모임 초대",
+  GROUP_MEMBER_REMOVED: "모임",
+  INVITATION_ACCEPTED: "초대 수락",
+  INVITATION_DECLINED: "초대 거절",
+  JOIN_REQUEST_APPROVED: "지원 승인",
+  JOIN_REQUEST_REJECTED: "지원 결과",
+  NOTICE_CREATED: "공지",
+  PERFORMANCE_CREATED: "새 공연",
+  RECRUIT_POST_APPLIED: "모집 지원",
+  TEAM_APPLY: "모집 지원",
+  TEAM_INVITE: "팀 초대",
+  TEAM_MEMBER_REMOVED: "팀",
 };
 
 export function formatInstruments(
