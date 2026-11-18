@@ -281,6 +281,74 @@ export const SONGS: Song[] = [
   song(110, "Creep", "Radiohead", "ROCK", 92, "G"),
   song(111, "American Idiot", "Green Day", "PUNK", 186, "Ab"),
   song(112, "그대에게", "무한궤도", "ROCK", 140, "D"),
+  // 아래는 AI 곡 추천(Figma 27) 목업에 나오는 곡 — 추천 근거("… 실력 충족/난이도 초과")가 팀원 실력과
+  // 맞도록 세션별 난이도를 따로 둔다(src/mocks/recommendations.ts).
+  {
+    ...song(113, "Get Lucky", "Daft Punk", "POP", 116, "F#m"),
+    difficulty: [
+      { level: "NOVICE", part: "VOCAL" },
+      { level: "NOVICE", part: "AC_GT" },
+      { level: "INTERMEDIATE", part: "EL_GT" },
+      { level: "INTERMEDIATE", part: "BASS" },
+      { level: "NOVICE", part: "DRUM" },
+    ],
+  },
+  {
+    ...song(114, "Love Galore", "SZA", "RNB", 135, "C#m"),
+    difficulty: [
+      { level: "INTERMEDIATE", part: "VOCAL" },
+      { level: "NOVICE", part: "KEY" },
+      { level: "NOVICE", part: "BASS" },
+      { level: "NOVICE", part: "DRUM" },
+    ],
+  },
+  {
+    ...song(115, "Sunday Morning", "Maroon 5", "POP", 88, "C"),
+    difficulty: [
+      { level: "INTERMEDIATE", part: "VOCAL" },
+      { level: "NOVICE", part: "AC_GT" },
+      { level: "NOVICE", part: "EL_GT" },
+      { level: "INTERMEDIATE", part: "KEY" },
+      { level: "NOVICE", part: "BASS" },
+      { level: "NOVICE", part: "DRUM" },
+    ],
+  },
+  {
+    ...song(116, "Superstition", "Stevie Wonder", "RNB", 100, "Ebm"),
+    difficulty: [
+      { level: "INTERMEDIATE", part: "VOCAL" },
+      { level: "INTERMEDIATE", part: "AC_GT" },
+      { level: "INTERMEDIATE", part: "EL_GT" },
+      { level: "ADVANCED", part: "KEY" },
+      { level: "INTERMEDIATE", part: "BASS" },
+      { level: "ADVANCED", part: "DRUM" },
+    ],
+  },
+  {
+    ...song(117, "Electric Feel", "MGMT", "INDIE", 103, "A"),
+    difficulty: [
+      { level: "NOVICE", part: "VOCAL" },
+      { level: "NOVICE", part: "EL_GT" },
+      { level: "INTERMEDIATE", part: "KEY" },
+      { level: "INTERMEDIATE", part: "BASS" },
+      { level: "NOVICE", part: "DRUM" },
+    ],
+  },
+  {
+    ...song(118, "Leave The Door Open", "Silk Sonic", "RNB", 74, "C"),
+    difficulty: [
+      { level: "ADVANCED", part: "VOCAL" },
+      { level: "NOVICE", part: "AC_GT" },
+      { level: "INTERMEDIATE", part: "KEY" },
+      { level: "INTERMEDIATE", part: "BASS" },
+      { level: "NOVICE", part: "DRUM" },
+    ],
+  },
+  // 세션 난이도 정보가 없는 곡 — 추천 근거(reasons)가 빈 배열인 경우를 보여 준다.
+  {
+    ...song(119, "Fly Me to the Moon", "Frank Sinatra", "JAZZ", 120, "C"),
+    difficulty: [],
+  },
 ];
 
 function teamMember(

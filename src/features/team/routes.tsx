@@ -18,7 +18,8 @@ const noBottomNav = { hasBottomNav: false } satisfies ScreenRouteHandle;
 // 공연 팀(공연에 속함)과 독립 팀. 팀의 공연은 홈 탭에서 보여 준다(따로 공연 탭을 두지 않는다).
 //
 // 팀 쪽에서는 "셋리스트"라는 말을 쓰지 않는다(서버 결정, 이슈 #85) — Figma의 '셋리스트' 탭은
-// "선택곡"이다. 팀장이 곡 추가 시트(Figma 16)로 선택곡을 고르고(PUT /teams/{id}/songs), 공연 팀이면
+// "선택곡"이다. 팀장이 곡 추가 시트(Figma 16)로 선택곡을 고르고(PUT /teams/{id}/songs) — 시트의
+// "AI 추천"은 AI 곡 추천 시트(Figma 26~28, GET /teams/{id}/songs/recommendations)를 띄운다 — 공연 팀이면
 // 그중 일부를 공연에 넘긴다(확정 시트 Figma 17, PUT /performances/{pid}/setlist/teams/{tid}).
 // 넘긴 곡은 "후보", 모임장이 셋리스트를 확정하면 "확정"이다. 팀원 추천(AI)은 멤버 탭 안에 있다.
 // 헤더 더보기: 팀장은 팀 관리(/manage), 팀원은 팀 나가기. 팀원이 아니면 팀 홈의 공개 정보만 보고
