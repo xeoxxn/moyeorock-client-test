@@ -87,6 +87,8 @@ WDS non-title `bold`는 600이다(Figma Bold 700과 차이는 그대로 둔다).
 | 15 빈 상태 | `components/ui/EmptyState` | FallbackView |
 | Cover · Waveform · Music/Now Playing · Music/Mini Player · Brand/* | `components/music/Cover`(`PART_COVER_TONE`, `coverToneOf`) · `Waveform` · `NowPlaying` · `MiniPlayer` · `Brand`(BrandLogo·BrandLogoStacked·BrandSymbol, 도형은 `brandPaths.ts`) | — |
 
+**Apple Music 배지**(`components/music/AppleMusicBadge`)만 WDS가 아니다 — Apple 마케팅 도구(toolbox.marketingtools.apple.com)의 콤팩트 배지 임베드 그대로(Apple 서버 이미지 + 곡 링크)라 모양을 바꾸면 안 된다. 목록에선 곡 이름 옆(`MediaRow`의 `titleSuffix`, `SongResultRow`의 `appleMusicId`), 높이 12px 이상, 둘레 여백은 높이의 1/10 이상. 곡 데이터의 `appleMusicId`(한국 스토어 곡 ID)가 없으면 그리지 않는다. Apple에서 받아 올 곡 표지는 약관상 이 배지 옆에서만 보여 줄 수 있다(재생 없이 MusicKit 표지만 쓰는 건 금지).
+
 화면 뼈대는 `useScreenHeader(<ScreenHeader/>)` + `useScreenBackdrop(...)` + `<ScreenBody>`(스크롤, 미니 플레이어 아래 여백 자동) + (있으면) `<BottomActionArea>`다. 헤더 JSX는 `useMemo`로 감싼다.
 
 커버 색: 파트(녹음·세션)는 `PART_COVER_TONE`(보컬 blue · 일렉 기타 red · 어쿠스틱 기타 teal · 베이스 green · 드럼 blue · 키보드 violet), 사진 없는 팀·모임·공연·곡은 `coverToneOf(kind, id)`. 커버 글자는 파트 영문(Vocal · Electric Guitar · Acoustic Guitar · Bass · Drums · Keys, `INSTRUMENT_COVER_LABEL`) — 기타는 일렉·어쿠스틱을 꼭 구분한다.
