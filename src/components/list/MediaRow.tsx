@@ -14,6 +14,8 @@ export interface MediaRowProps {
   title: ReactNode;
   /** 제목 앞에 붙는 요소(공지의 "고정" 배지처럼 제목과 한 줄) */
   titlePrefix?: ReactNode;
+  /** 제목 뒤에 붙는 요소(곡의 Apple Music 배지처럼 제목과 한 줄). 제목이 길면 제목만 줄어든다. */
+  titleSuffix?: ReactNode;
   meta?: ReactNode;
   /** 메타 아래 추가 줄(알림의 거절·수락 버튼 등) */
   footer?: ReactNode;
@@ -49,6 +51,7 @@ function MediaRow({
   padding = "normal",
   title,
   titlePrefix,
+  titleSuffix,
   titleWeight = "bold",
   trailing,
 }: MediaRowProps) {
@@ -81,6 +84,7 @@ function MediaRow({
           >
             {title}
           </Typography>
+          {titleSuffix}
         </span>
         {meta !== undefined && (
           <Typography
