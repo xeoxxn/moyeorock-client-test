@@ -19,6 +19,8 @@ import type { Team, TeamSongRecommendation } from "@/lib/domain/types";
 // - 행 둘째 줄은 "아티스트 · 근거 한 줄": 다른 팀이 고른 곡이면 "다른 팀도 골랐어요"(tertiary), 아니면
 //   "… 난이도 초과" 근거(주황), 없으면 첫 근거. 근거는 백엔드 문장 그대로 쓰고, 비었으면 아티스트만.
 //   선택곡에 담은 곡은 곡 추가 시트처럼 "아티스트 · 추가됨"으로 바꾼다.
+// - 곡 이름 옆 "Apple Music" 배지는 그 곡의 Apple Music 페이지로 보낸다(재생은 앱 안에서 하지 않는다).
+//   나중에 Apple에서 받아 올 곡 표지는 Apple 약관상 이 배지 옆에서만 보여 줄 수 있다.
 // - +/✓는 곡 추가 시트와 같은 선택곡 state를 바꾼다(곡 추가 시트가 팀장 전용이라 이 시트도 팀장만 연다).
 // - 시트를 닫거나 다시 부르면 앞 요청을 취소해서 늦게 온 응답이 새 화면을 덮지 않는다.
 interface SongRecommendSheetProps {
@@ -169,6 +171,7 @@ function SongRecommendSheet({
                   return (
                     <SongResultRow
                       added={added}
+                      appleMusicId={item.song.appleMusicId}
                       artist={
                         note ? (
                           <>
