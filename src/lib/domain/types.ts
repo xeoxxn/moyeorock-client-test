@@ -143,6 +143,14 @@ export interface Song extends SongSummary {
   songKey: string;
   bpm: number;
   difficulty: { part: Instrument; level: Level }[];
+  /**
+   * Apple Music 한국 스토어 곡 ID(`music.apple.com/kr/song/{id}`). 곡 옆 "Apple Music" 배지가 이 곡
+   * 페이지로 이어진다. 못 찾은 곡은 null이고 배지를 그리지 않는다.
+   *
+   * 서버 응답에 아직 없다 — 서버 쪽 요청 사항. 앞으로 곡 표지도 Apple에서 받아 오는데, Apple 약관상
+   * 표지는 그 곡의 Apple Music 페이지로 가는 배지 옆에서만 보여 줄 수 있어서 둘을 같이 받는다.
+   */
+  appleMusicId: string | null;
 }
 
 /**

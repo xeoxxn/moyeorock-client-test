@@ -244,6 +244,30 @@ export const NOTICES: Notice[] = [
   },
 ];
 
+// 목업 곡의 Apple Music 한국 스토어 곡 ID — Apple Music 마케팅 도구(toolbox.marketingtools.apple.com,
+// 스토어 "대한민국")에서 원곡 앨범 버전으로 찾았다. iTunes Search API는 country=kr이면 결과를 비워서 돌려준다.
+const APPLE_MUSIC_ID: Record<number, string> = {
+  101: "1591437487",
+  102: "1635469851",
+  103: "1316404636",
+  104: "1160082180",
+  105: "1536966406",
+  106: "850569484",
+  107: "1248866137",
+  108: "1616649362",
+  109: "1077572785",
+  110: "1097862231",
+  111: "1161539471",
+  112: "1677088154",
+  113: "1673536443",
+  114: "1239977713",
+  115: "1428784095",
+  116: "1440808985",
+  117: "273519677",
+  118: "1612867242",
+  119: "1443167444",
+};
+
 function song(
   id: number,
   title: string,
@@ -253,6 +277,7 @@ function song(
   songKey = "C",
 ): Song {
   return {
+    appleMusicId: APPLE_MUSIC_ID[id] ?? null,
     artist,
     bpm,
     difficulty: [
